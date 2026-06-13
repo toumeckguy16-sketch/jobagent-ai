@@ -51,7 +51,7 @@ def init_session():
         "quiz_questions": [],
         "quiz_answers": {},
         "quiz_submitted": False,
-        "use_mock": True,
+        "use_mock": False,
         "candidate_profile": None,
         "profile_source": None,
         "cv_filename": None,

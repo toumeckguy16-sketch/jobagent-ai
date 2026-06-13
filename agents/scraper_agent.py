@@ -52,8 +52,14 @@ class ScraperAgent:
         List[dict] (JobSearchState)
     """
 
-    # Sites ciblés dans les requêtes Tavily
-    TARGET_SITES = ["cameroundesk.com", "minajob.com", "emploi.cm"]
+    # Sites ciblés dans les requêtes Tavily (5 sources différentes)
+    TARGET_SITES = [
+        "cameroundesk.com",
+        "minajob.com",
+        "emploi.cm",
+        "recrutement-cameroun.com",
+        "joobaz.com",
+    ]
     
     # Seuil de publication (MFE 2026 : seulement à partir de Janvier 2026)
     PUBLICATION_THRESHOLD = date(2026, 1, 1)
@@ -85,9 +91,15 @@ class ScraperAgent:
         les filtres de date/qualité ou si le pool brut est vide.
         """
         print("  → [ScraperAgent] Recherche via Tavily...")
+        print(f"  → [ScraperAgent] Profil reçu ({len(query)} chars) : {query[:200]}...")
         
         # Réinitialiser le pool brut à chaque appel
         self._all_raw_jobs = []
+        
+        # Garde-fou : si le profil est vide ou trop court, lever une alerte
+        if not query or len(query.strip()) < 10:
+            print("  ⚠ [ScraperAgent] Profil vide ou trop court — recherche générique activée")
+            query = "offre emploi Cameroun"
         
         keywords = self._extract_keywords(query)
         queries = self._build_queries(keywords)
@@ -256,7 +268,7 @@ class ScraperAgent:
         """
         Construit plusieurs requêtes de recherche ciblées avec la période courante.
         """
-        base = " ".join(keywords[:4])
+        base = " ".join(keywords[:6])
         queries = []
         
         # Période dynamique basée sur la date actuelle
@@ -281,19 +293,10 @@ class ScraperAgent:
         Cible 5 sites différents avec les mots-clés du profil.
         Utilisé lorsque toutes les offres ont été rejetées ou que le pool brut est vide.
         """
-        base = " ".join(keywords[:4])
-        
-        # Sites élargis (5 sources différentes)
-        fallback_sites = [
-            "cameroundesk.com",
-            "minajob.com",
-            "emploi.cm",
-            "recrutement-cameroun.com",
-            "joobaz.com",
-        ]
+        base = " ".join(keywords[:6])
         
         queries = []
-        for site in fallback_sites:
+        for site in self.TARGET_SITES:
             queries.append(f"offre emploi récente {base} Cameroun site:{site}")
         
         # Requête générale sans site ciblé
@@ -428,7 +431,8 @@ class ScraperAgent:
         }
         
         words = profile.lower().split()
-        keywords = [w.strip(".,;:!?") for w in words if len(w) > 3 and w not in stopwords]
+        # Conserver les mots de 2+ caractères (pour capturer "RH", "BI", etc.)
+        keywords = [w.strip(".,;:!?") for w in words if len(w) >= 2 and w not in stopwords]
         
         # Déduplication
         seen, unique = set(), []
@@ -437,7 +441,7 @@ class ScraperAgent:
                 seen.add(k)
                 unique.append(k)
                 
-        return unique[:6]
+        return unique[:8]
 
     def _identify_source(self, url: str) -> str:
         """Identifie le site source depuis l'URL"""
