@@ -84,7 +84,7 @@ def render_login_page():
             load_dotenv()
             client_id = os.getenv("GOOGLE_CLIENT_ID")
             client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
-            redirect_uri = "http://localhost:8501"
+            redirect_uri = "https://jobagent-ai-taxhx9jqu3drmxss6muhkg.streamlit.app"
             
             token_url = "https://oauth2.googleapis.com/token"
             data = {
@@ -102,7 +102,7 @@ def render_login_page():
                 firebase_api_key = os.getenv("FIREBASE_API_KEY", "AIzaSyDPzWlUWTTJglkNcwNe-SdfqDfZXFrChCs")
                 fb_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key={firebase_api_key}"
                 payload = {
-                    "requestUri": "http://localhost",
+                    "requestUri": "https://jobagent-ai-taxhx9jqu3drmxss6muhkg.streamlit.app",
                     "postBody": f"id_token={id_token}&providerId=google.com",
                     "returnSecureToken": True,
                     "returnIdpCredential": True
@@ -386,7 +386,7 @@ def _render_google_button():
         st.error("La clé GOOGLE_CLIENT_ID est manquante dans le fichier .env.")
         return
 
-    redirect_uri = "http://localhost:8501"
+    redirect_uri = "https://jobagent-ai-taxhx9jqu3drmxss6muhkg.streamlit.app"
     
     auth_url = (
         f"https://accounts.google.com/o/oauth2/v2/auth?"
