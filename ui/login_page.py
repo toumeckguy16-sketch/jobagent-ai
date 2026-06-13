@@ -1,4 +1,4 @@
-"""
+﻿"""
 ui/login_page.py
 Page de connexion — Email/Password + Google OAuth
 Thème dynamique (sombre/clair) identique à app.py
@@ -386,12 +386,12 @@ def _render_google_button():
         st.error("La clé GOOGLE_CLIENT_ID est manquante dans le fichier .env.")
         return
 
-    redirect_uri = "https://jobagent-ai-taxhx9jqu3drmxss6muhkg.streamlit.app"
+    redirect_uri_encoded = "https%3A%2F%2Fjobagent-ai-taxhx9jqu3drmxss6muhkg.streamlit.app"
     
     auth_url = (
         f"https://accounts.google.com/o/oauth2/v2/auth?"
         f"client_id={client_id}&"
-        f"redirect_uri={redirect_uri}&"
+        f"redirect_uri={redirect_uri_encoded}&"
         f"response_type=code&"
         f"scope=openid%20email%20profile&"
         f"access_type=offline&"
