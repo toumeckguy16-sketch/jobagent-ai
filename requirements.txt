@@ -13,5 +13,4 @@ langgraph
 numpy
 requests
 pydantic
-langchain-ollama
 tavily-python

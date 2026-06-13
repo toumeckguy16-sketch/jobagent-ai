@@ -1,13 +1,14 @@
-﻿"""
+"""
 Agent Extracteur (F3)
 Extrait automatiquement les compétences requises dans chaque offre d'emploi.
-Utilise Ollama pour faire tourner un modèle LLM en LOCAL (zéro coût, zéro API).
+Utilise ChatGroq (API cloud) pour fonctionner sur Streamlit Cloud.
+Note : Ollama (local) remplacé par ChatGroq pour la compatibilité cloud.
 """
 import os
 import re
 import json
 from typing import List
-from langchain_ollama import ChatOllama
+from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
@@ -25,14 +26,14 @@ class JobSkills(BaseModel):
     tools:            List[str] = Field(description="Outils spécifiques")
 
 # ─────────────────────────────────────────────
-#  AGENT EXTRACTEUR — Ollama (local)
+#  AGENT EXTRACTEUR — ChatGroq (cloud)
 # ─────────────────────────────────────────────
 class ExtractorAgent:
     """
     Agent qui analyse chaque offre d'emploi et en extrait
-    les compétences de façon structurée via un modèle local Ollama.
+    les compétences de façon structurée via ChatGroq.
     """
-    DEFAULT_MODEL = "minimax-m2.5"
+    DEFAULT_MODEL = "llama-3.3-70b-versatile"
     
     # NOTE : Les accolades littérales doivent être doublées {{ }} pour éviter 
     # que LangChain ne les interprète comme des variables de prompt.
@@ -57,14 +58,12 @@ Entreprise     : {company}
 Description    : {description}
 Retourne le JSON structuré."""
 
-    def __init__(self, model: str = None, base_url: str = None):
-        self.model_name = model or os.getenv("OLLAMA_MODEL", self.DEFAULT_MODEL)
-        self.base_url   = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-        self.llm = ChatOllama(
-            model       = self.model_name,
-            base_url    = self.base_url,
-            temperature = 0,
-            format      = "json",
+    def __init__(self, model: str = None):
+        self.model_name = model or os.getenv("GROQ_EXTRACTOR_MODEL", self.DEFAULT_MODEL)
+        self.llm = ChatGroq(
+            model=self.model_name,
+            temperature=0,
+            api_key=os.getenv("GROQ_API_KEY"),
         )
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", self.SYSTEM_PROMPT),
@@ -76,7 +75,7 @@ Retourne le JSON structuré."""
         enriched_jobs = []
         for job in jobs:
             try:
-                print(f"    [Ollama/{self.model_name}] Extraction : {job['title']} @ {job['company']}")
+                print(f"    [Groq/{self.model_name}] Extraction : {job['title']} @ {job['company']}")
                 skills       = self._extract_from_job(job)
                 enriched_job = {**job, "skills": skills}
                 enriched_jobs.append(enriched_job)
