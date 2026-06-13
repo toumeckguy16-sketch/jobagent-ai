@@ -41,14 +41,17 @@ class AuthManager:
             json={"idToken": data["idToken"], "displayName": full_name, "returnSecureToken": False}
         )
         # Sauvegarder dans Firestore
-        AuthManager._save_user_firestore(uid, {
-            "uid":        uid,
-            "email":      email,
-            "full_name":  full_name,
-            "provider":   "email",
-            "created_at": datetime.now().isoformat(),
-            "last_login": datetime.now().isoformat(),
-        })
+        try:
+            AuthManager._save_user_firestore(uid, {
+                "uid":        uid,
+                "email":      email,
+                "full_name":  full_name,
+                "provider":   "email",
+                "created_at": datetime.now().isoformat(),
+                "last_login": datetime.now().isoformat(),
+            })
+        except Exception as e:
+            return {"success": False, "error": f"Erreur de base de données : {e}"}
         return {
             "success":    True,
             "user": {
@@ -76,10 +79,12 @@ class AuthManager:
         if "error" in data:
             return {"success": False, "error": AuthManager._translate_error(data["error"]["message"])}
         uid = data["localId"]
-        # Mettre à jour last_login
-        AuthManager._update_last_login(uid)
-        # Récupérer le profil Firestore
-        profile = AuthManager._get_user_firestore(uid)
+        # Mettre à jour last_login et récupérer le profil
+        try:
+            AuthManager._update_last_login(uid)
+            profile = AuthManager._get_user_firestore(uid)
+        except Exception as e:
+            return {"success": False, "error": f"Erreur de base de données : {e}"}
         full_name = profile.get("full_name", data.get("displayName", "Utilisateur"))
         return {
             "success": True,
