@@ -3,8 +3,10 @@ run_streamlit.py
 Routeur Streamlit : login → app
 """
 
-import streamlit as st
 import os
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
+
+import streamlit as st
 import sys
 from pathlib import Path
 
