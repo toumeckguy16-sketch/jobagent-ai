@@ -267,7 +267,7 @@ class AuthManager:
     @staticmethod
     def save_job_history(uid: str, pipeline_result: dict):
         """Ajoute une recherche à l'historique de l'utilisateur dans une sous-collection"""
-        if db is None: return False
+        if not db: return False
         try:
             # On utilise un document indexé par timestamp pour l'historique
             now = datetime.now()
@@ -289,7 +289,7 @@ class AuthManager:
     @staticmethod
     def get_job_history(uid: str, limit: int = 20):
         """Récupère l'historique des recherches trié par date décroissante"""
-        if db is None: return []
+        if not db: return []
         try:
             from firebase_admin import firestore
             docs = db.collection("users").document(uid).collection("job_history")\
@@ -301,7 +301,7 @@ class AuthManager:
     @staticmethod
     def get_saved_profiles(uid: str):
         """Récupère la liste des profils sauvegardés pour cet utilisateur"""
-        if db is None: return []
+        if not db: return []
         try:
             docs = db.collection("users").document(uid).collection("saved_profiles").stream()
             return [{"id": doc.id, **doc.to_dict()} for doc in docs]
@@ -312,7 +312,7 @@ class AuthManager:
     @staticmethod
     def load_saved_profile(uid: str, profile_id: str):
         """Charge un profil spécifique depuis la collection saved_profiles"""
-        if db is None: return None
+        if not db: return None
         try:
             doc = db.collection("users").document(uid).collection("saved_profiles").document(profile_id).get()
             return doc.to_dict() if doc.exists else None
