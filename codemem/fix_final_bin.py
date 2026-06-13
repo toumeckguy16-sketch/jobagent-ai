@@ -1,0 +1,14 @@
+import io
+p = r'C:/Users/Stel_toumeck/Documents/codemem/ui/app.py'
+with open(p, 'rb') as f: d = f.read()
+# Back arrow fix
+d = d.replace(b'\xC3\xA2\xE2\x80\xA0\xC2\x90', b'\xE2\x86\x90')
+# Quiz icons fix
+d = d.replace(b'\x27\xC3\xA2\xC5\x93\xE2\x80\x9C\x27 \x27\xE2\x9C\x93\x27', b'\x27\xE2\x9C\x93\x27')
+d = d.replace(b'\x27\xC3\xA2\xC5\x93\xE2\x80\x9C\x27', b'\x27\xE2\x9C\x93\x27')
+d = d.replace(b'\xE2\x9C\x97\x27', b'\xE2\x9C\x97\x27') # Placeholder
+d = d.replace(b'\xC3\xA2\xC5\x93\xE2\x80\x94', b'\xE2\x9C\x97')
+# Help text fix
+d = d.replace(b'\xC3\xA0la page', b'\xC3\xA0 la page')
+with open(p, 'wb') as f: f.write(d)
+

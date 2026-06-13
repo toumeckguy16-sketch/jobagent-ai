@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JobAgentAI — Votre Agent IA pour l'Emploi au Cameroun</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Roboto:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+
+<style>
+  /* ───────── TOKENS ───────── */
+  :root[data-theme="dark"] {
+    --bg:         #0F0F0F;
+    --bg2:        #161616;
+    --bg3:        #1E1E1E;
+    --surface:    #242424;
+    --border:     rgba(255,255,255,0.08);
+    --text:       #E5E5E5;
+    --muted:      #888;
+    --accent:     #FF6B00;
+    --accent-glow:rgba(255,107,0,0.25);
+    --accent2:    #FF9240;
+    --hero-grad:  linear-gradient(135deg, #1a0a00 0%, #0F0F0F 50%, #0d1a00 100%);
+  }
+  :root[data-theme="light"] {
+    --bg:         #FFFFFF;
+    --bg2:        #F8F8F8;
+    --bg3:        #F0F0F0;
+    --surface:    #ECECEC;
+    --border:     rgba(0,0,0,0.08);
+    --text:       #111;
+    --muted:      #666;
+    --accent:     #FF6B00;
+    --accent-glow:rgba(255,107,0,0.15);
+    --accent2:    #FF9240;
+    --hero-grad:  linear-gradient(135deg, #fff3e8 0%, #ffffff 50%, #fff3e8 100%);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Roboto', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    transition: background .35s, color .35s;
+    overflow-x: hidden;
+  }
+
+  /* ───────── NAV ───────── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 48px;
+    background: rgba(15,15,15,0.72);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--border);
+    transition: background .35s, border-color .35s;
+  }
+  [data-theme="light"] nav { background: rgba(255,255,255,0.82); }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 1.5rem;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .logo span { color: var(--accent); }
+
+  .nav-links { display: flex; gap: 36px; list-style: none; }
+  .nav-links a {
+    text-decoration: none; color: var(--muted); font-size: .9rem;
+    font-weight: 500; letter-spacing: .02em;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+
+  /* theme toggle */
+  .toggle-btn {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 6px 14px;
+    cursor: pointer; font-size: .8rem; color: var(--muted);
+    font-family: 'Roboto', sans-serif; font-weight: 500;
+    transition: all .2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .toggle-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  .btn-nav {
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 8px;
+    padding: 10px 22px; cursor: pointer;
+    font-family: 'Roboto', sans-serif; font-size: .9rem; font-weight: 600;
+    transition: opacity .2s, transform .15s;
+    text-decoration: none;
+  }
+  .btn-nav:hover { opacity: .88; transform: translateY(-1px); }
+
+  /* ───────── HERO ───────── */
+  .hero {
+    min-height: 100vh;
+    background: var(--hero-grad);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 140px 24px 100px;
+    position: relative; overflow: hidden;
+  }
+
+  /* animated grid lines */
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 64px 64px;
+    animation: gridShift 20s linear infinite;
+    opacity: 0.6;
+  }
+  @keyframes gridShift { 0%{background-position:0 0} 100%{background-position:64px 64px} }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent-glow); border: 1px solid var(--accent);
+    border-radius: 999px; padding: 6px 18px;
+    font-size: .8rem; font-weight: 600; color: var(--accent);
+    letter-spacing: .08em; text-transform: uppercase;
+    margin-bottom: 28px; position: relative;
+    animation: fadeUp .7s ease both;
+  }
+  .hero-badge::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); animation: pulse 1.8s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.8rem, 7vw, 5.5rem);
+    font-weight: 800; line-height: 1.05;
+    letter-spacing: -0.04em;
+    max-width: 900px;
+    position: relative;
+    animation: fadeUp .8s .1s ease both;
+  }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+
+  .hero p {
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    color: var(--muted); max-width: 620px;
+    margin: 24px auto 44px;
+    font-weight: 300; line-height: 1.7;
+    position: relative;
+    animation: fadeUp .8s .2s ease both;
+  }
+
+  .hero-cta {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    justify-content: center; position: relative;
+    animation: fadeUp .8s .3s ease both;
+  }
+
+  .btn-primary {
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 10px;
+    padding: 16px 36px; font-size: 1rem; font-weight: 600;
+    cursor: pointer; font-family: 'Roboto', sans-serif;
+    transition: transform .2s, box-shadow .2s;
+    box-shadow: 0 0 0 0 var(--accent-glow);
+    text-decoration: none; display: inline-block;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px var(--accent-glow);
+  }
+
+  .btn-outline {
+    background: transparent; color: var(--text);
+    border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 16px 36px; font-size: 1rem; font-weight: 500;
+    cursor: pointer; font-family: 'Roboto', sans-serif;
+    transition: border-color .2s, background .2s;
+    text-decoration: none; display: inline-block;
+  }
+  .btn-outline:hover { border-color: var(--accent); background: var(--accent-glow); }
+
+  /* hero visual — agent pipeline */
+  .pipeline-visual {
+    margin-top: 72px; position: relative;
+    display: flex; align-items: center; gap: 0;
+    flex-wrap: nowrap; justify-content: center;
+    animation: fadeUp .9s .5s ease both;
+    overflow-x: auto; padding-bottom: 8px;
+  }
+
+  .agent-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 20px;
+    min-width: 120px; text-align: center;
+    transition: border-color .3s, transform .3s, box-shadow .3s;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .agent-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px var(--accent-glow);
+  }
+  .agent-icon { font-size: 1.6rem; margin-bottom: 8px; }
+  .agent-name {
+    font-family: 'Syne', sans-serif; font-size: .75rem;
+    font-weight: 700; color: var(--text); letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .agent-sub { font-size: .68rem; color: var(--muted); margin-top: 2px; }
+
+  .pipeline-arrow {
+    font-size: 1.2rem; color: var(--accent);
+    padding: 0 6px; flex-shrink: 0;
+    animation: arrowPulse 1.5s ease-in-out infinite alternate;
+  }
+  @keyframes arrowPulse { from{opacity:.4} to{opacity:1} }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ───────── SECTION SHARED ───────── */
+  section { padding: 100px 24px; }
+
+  .section-label {
+    display: inline-block;
+    font-size: .75rem; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800; letter-spacing: -.03em; line-height: 1.1;
+  }
+  .section-sub {
+    color: var(--muted); max-width: 540px;
+    margin: 14px 0 0; font-size: 1rem; font-weight: 300; line-height: 1.7;
+  }
+  .container { max-width: 1140px; margin: 0 auto; }
+
+  /* ───────── STATS BAR ───────── */
+  .stats-bar {
+    background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    padding: 48px 24px;
+  }
+  .stats-grid {
+    max-width: 1000px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(4,1fr); gap: 24px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.4rem; font-weight: 800; color: var(--accent);
+    line-height: 1;
+  }
+  .stat-label { font-size: .85rem; color: var(--muted); margin-top: 6px; }
+
+  /* ───────── HOW IT WORKS ───────── */
+  .how-section { background: var(--bg); }
+  .steps-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+    gap: 2px; margin-top: 60px;
+    border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+  }
+  .step {
+    background: var(--bg2); padding: 40px 32px;
+    border-right: 1px solid var(--border);
+    transition: background .2s;
+    position: relative;
+  }
+  .step:last-child { border-right: none; }
+  .step:hover { background: var(--bg3); }
+  .step-num {
+    font-family: 'Syne', sans-serif; font-size: 3rem; font-weight: 800;
+    color: var(--border); line-height: 1; margin-bottom: 20px;
+  }
+  .step:hover .step-num { color: var(--accent); transition: color .2s; }
+  .step h3 {
+    font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .step p { font-size: .9rem; color: var(--muted); line-height: 1.65; }
+
+  /* ───────── FEATURES ───────── */
+  .features-section { background: var(--bg2); }
+  .features-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px,1fr));
+    gap: 24px; margin-top: 60px;
+  }
+  .feature-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 16px; padding: 36px;
+    transition: border-color .25s, transform .25s, box-shadow .25s;
+    position: relative; overflow: hidden;
+  }
+  .feature-card::after {
+    content: '';
+    position: absolute; inset: 0; opacity: 0;
+    background: radial-gradient(circle at top left, var(--accent-glow) 0%, transparent 70%);
+    transition: opacity .35s;
+  }
+  .feature-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 16px 40px var(--accent-glow); }
+  .feature-card:hover::after { opacity: 1; }
+  .feat-icon { font-size: 2rem; margin-bottom: 18px; display: block; }
+  .feature-card h3 {
+    font-family: 'Syne', sans-serif; font-size: 1.15rem; font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .feature-card p { font-size: .9rem; color: var(--muted); line-height: 1.65; }
+  .feat-tag {
+    display: inline-block; margin-top: 16px;
+    background: var(--accent-glow); color: var(--accent);
+    border-radius: 6px; padding: 3px 10px; font-size: .72rem; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase;
+  }
+
+  /* ───────── AGENTS ───────── */
+  .agents-section { background: var(--bg); }
+  .agents-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+    gap: 20px; margin-top: 60px;
+  }
+  .agent-detail {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px 24px;
+    transition: border-color .25s, box-shadow .25s;
+  }
+  .agent-detail:hover { border-color: var(--accent); box-shadow: 0 8px 28px var(--accent-glow); }
+  .ad-icon { font-size: 2rem; margin-bottom: 12px; }
+  .ad-name { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+  .ad-model { font-size: .73rem; color: var(--accent); font-weight: 600; margin-bottom: 10px; }
+  .ad-desc { font-size: .85rem; color: var(--muted); line-height: 1.6; }
+
+  /* ───────── PRICING ───────── */
+  .pricing-section { background: var(--bg2); }
+  .pricing-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr));
+    gap: 24px; margin-top: 60px; align-items: start;
+  }
+  .pricing-card {
+    background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: 20px; padding: 40px 36px;
+    position: relative; overflow: hidden;
+    transition: transform .25s, box-shadow .25s;
+  }
+  .pricing-card:hover { transform: translateY(-6px); }
+  .pricing-card.popular {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 24px 60px var(--accent-glow);
+  }
+  .popular-badge {
+    position: absolute; top: 20px; right: 20px;
+    background: var(--accent); color: #fff;
+    font-size: .7rem; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; border-radius: 6px; padding: 4px 10px;
+  }
+  .plan-name {
+    font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .plan-desc { font-size: .88rem; color: var(--muted); margin-bottom: 28px; line-height: 1.55; }
+  .plan-price {
+    font-family: 'Syne', sans-serif; font-size: 2.6rem; font-weight: 800;
+    color: var(--accent); line-height: 1;
+    margin-bottom: 4px;
+  }
+  .plan-period { font-size: .82rem; color: var(--muted); margin-bottom: 32px; }
+  .plan-features { list-style: none; margin-bottom: 32px; }
+  .plan-features li {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: .9rem; color: var(--text); padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.45;
+  }
+  .plan-features li:last-child { border-bottom: none; }
+  .check { color: var(--accent); font-weight: 700; flex-shrink: 0; }
+  .cross { color: var(--muted); flex-shrink: 0; }
+
+  .btn-plan {
+    display: block; width: 100%; text-align: center;
+    padding: 14px; border-radius: 10px;
+    font-family: 'Roboto', sans-serif; font-size: .95rem; font-weight: 600;
+    cursor: pointer; border: none; transition: opacity .2s, transform .15s;
+    text-decoration: none;
+  }
+  .btn-plan-accent { background: var(--accent); color: #fff; }
+  .btn-plan-outline { background: transparent; color: var(--text); border: 1.5px solid var(--border); }
+  .btn-plan:hover { opacity: .85; transform: translateY(-1px); }
+
+  /* ───────── CTA BANNER ───────── */
+  .cta-section {
+    background: var(--bg);
+    text-align: center; padding: 100px 24px;
+    position: relative; overflow: hidden;
+  }
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    pointer-events: none;
+  }
+  .cta-section h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800; letter-spacing: -.03em;
+    max-width: 700px; margin: 0 auto 20px;
+    position: relative;
+  }
+  .cta-section p {
+    color: var(--muted); max-width: 480px; margin: 0 auto 40px;
+    font-size: 1rem; position: relative;
+  }
+  .cta-section .hero-cta { position: relative; }
+
+  /* ───────── FOOTER ───────── */
+  footer {
+    background: var(--bg2); border-top: 1px solid var(--border);
+    padding: 40px 48px; display: flex;
+    align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; }
+  .footer-logo span { color: var(--accent); }
+  footer p { font-size: .82rem; color: var(--muted); }
+
+  /* ───────── RESPONSIVE ───────── */
+  @media (max-width: 768px) {
+    nav { padding: 14px 20px; }
+    .nav-links { display: none; }
+    .stats-grid { grid-template-columns: repeat(2,1fr); }
+    .steps-grid { grid-template-columns: 1fr; }
+    .step { border-right: none; border-bottom: 1px solid var(--border); }
+    footer { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="logo" href="#"><span>JobAgent</span>AI</a>
+  <ul class="nav-links">
+    <li><a href="#fonctionnement">Fonctionnement</a></li>
+    <li><a href="#agents">Agents</a></li>
+    <li><a href="#pricing">Tarifs</a></li>
+  </ul>
+  <div class="nav-right">
+    <button class="toggle-btn" onclick="toggleTheme()">
+      <span id="theme-icon">☀️</span> <span id="theme-label">Mode Clair</span>
+    </button>
+    <a href="#" onclick="window.parent.postMessage({type: 'navigate_login'}, '*'); return false;" class="btn-nav">Commencer</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">✦ Système Multi-Agents IA</div>
+  <h1>Trouvez l'emploi idéal<br>au <em>Cameroun</em>, sans effort.</h1>
+  <p>JobAgentAI analyse votre CV, scrape les offres du marché camerounais, évalue la compatibilité et vous coache — le tout en quelques secondes grâce à 5 agents IA spécialisés.</p>
+  <div class="hero-cta">
+    <a href="#" onclick="window.parent.postMessage({type: 'navigate_login'}, '*'); return false;" class="btn-primary">Démarrer gratuitement</a>
+    <a href="#fonctionnement" class="btn-outline">Voir comment ça marche →</a>
+  </div>
+
+  <!-- PIPELINE VISUAL -->
+  <div class="pipeline-visual">
+    <div class="agent-card">
+      <div class="agent-icon">📄</div>
+      <div class="agent-name">CVParser</div>
+      <div class="agent-sub">Llama 3.3-70b</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="agent-card">
+      <div class="agent-icon">🔍</div>
+      <div class="agent-name">Scraper</div>
+      <div class="agent-sub">Tavily API</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="agent-card">
+      <div class="agent-icon">⚗️</div>
+      <div class="agent-name">Extractor</div>
+      <div class="agent-sub">minimax-m2.5</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="agent-card">
+      <div class="agent-icon">📊</div>
+      <div class="agent-name">Analyst</div>
+      <div class="agent-sub">GPT-4o-mini</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="agent-card">
+      <div class="agent-icon">🎯</div>
+      <div class="agent-name">Coach</div>
+      <div class="agent-sub">RAG + ChromaDB</div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stats-grid">
+    <div>
+      <div class="stat-num">5</div>
+      <div class="stat-label">Agents IA spécialisés</div>
+    </div>
+    <div>
+      <div class="stat-num">+30</div>
+      <div class="stat-label">Offres analysées / session</div>
+    </div>
+    <div>
+      <div class="stat-num">98%</div>
+      <div class="stat-label">Précision d'extraction</div>
+    </div>
+    <div>
+      <div class="stat-num">&lt;60s</div>
+      <div class="stat-label">Pipeline complet</div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="fonctionnement">
+  <div class="container">
+    <span class="section-label">Fonctionnement</span>
+    <h2 class="section-title">De votre CV aux offres<br>qui vous correspondent.</h2>
+    <p class="section-sub">Un pipeline orchestré par LangGraph qui transforme votre profil en opportunités concrètes sur le marché camerounais.</p>
+
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>Déposez votre CV</h3>
+        <p>Uploadez votre CV au format PDF. Notre agent CVParser (Llama 3.3-70b) extrait compétences, expériences et formations automatiquement.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>Scraping en temps réel</h3>
+        <p>Le ScraperAgent interroge Tavily pour trouver les offres d'emploi actuelles au Cameroun correspondant à votre profil.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>Extraction & Scoring</h3>
+        <p>L'ExtractorAgent structure les offres. L'AnalystAgent attribue un score de compatibilité hybride (40% cosinus + 60% LLM).</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <h3>Coaching personnalisé</h3>
+        <p>Le CoachAgent via RAG vous prépare aux entretiens avec des quiz QCM adaptés à chaque poste ciblé.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section">
+  <div class="container">
+    <span class="section-label">Fonctionnalités</span>
+    <h2 class="section-title">Tout ce dont vous avez besoin<br>pour décrocher le poste.</h2>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feat-icon">🧠</span>
+        <h3>Analyse CV intelligente</h3>
+        <p>Extraction automatique de vos compétences, expériences et diplômes. Stockage persistant de votre profil via Firebase Firestore.</p>
+        <span class="feat-tag">CVParser Agent</span>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">🌍</span>
+        <h3>Marché camerounais ciblé</h3>
+        <p>Recherche d'offres focalisée sur le Cameroun (Douala, Yaoundé, etc.) pour des résultats locaux et pertinents.</p>
+        <span class="feat-tag">ScraperAgent</span>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">🎯</span>
+        <h3>Score de compatibilité hybride</h3>
+        <p>Algorithme combinant similarité cosinus (40%) et évaluation LLM (60%) pour un matching précis entre vous et l'offre.</p>
+        <span class="feat-tag">AnalystAgent</span>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">📋</span>
+        <h3>Extraction structurée</h3>
+        <p>Données d'offres nettoyées et normalisées : titre, entreprise, compétences requises, localisation et contrat.</p>
+        <span class="feat-tag">ExtractorAgent</span>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">🗣️</span>
+        <h3>Préparation aux entretiens</h3>
+        <p>Quiz QCM à 3 options générés dynamiquement par le CoachAgent via RAG + ChromaDB, spécifiques à chaque offre.</p>
+        <span class="feat-tag">CoachAgent</span>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">🔐</span>
+        <h3>Profil sécurisé & synchronisé</h3>
+        <p>Authentification Firebase et persistance de votre profil pour retrouver vos analyses et offres à chaque session.</p>
+        <span class="feat-tag">Firebase Auth</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AGENTS DETAIL -->
+<section class="agents-section" id="agents">
+  <div class="container">
+    <span class="section-label">Les 5 Agents</span>
+    <h2 class="section-title">Une équipe IA dédiée<br>à votre recherche.</h2>
+    <p class="section-sub">Chaque agent est spécialisé et optimisé pour sa tâche, orchestrés ensemble par LangGraph.</p>
+
+    <div class="agents-grid">
+      <div class="agent-detail">
+        <div class="ad-icon">📄</div>
+        <div class="ad-name">CVParser Agent</div>
+        <div class="ad-model">Groq / Llama-3.3-70b</div>
+        <div class="ad-desc">Parse et structure votre CV en un profil complet : compétences, expériences, formations, langues.</div>
+      </div>
+      <div class="agent-detail">
+        <div class="ad-icon">🔍</div>
+        <div class="ad-name">ScraperAgent</div>
+        <div class="ad-model">Tavily API</div>
+        <div class="ad-desc">Scrape en temps réel les plateformes d'emploi camerounaises et les sites d'entreprises locales.</div>
+      </div>
+      <div class="agent-detail">
+        <div class="ad-icon">⚗️</div>
+        <div class="ad-name">ExtractorAgent</div>
+        <div class="ad-model">Ollama / minimax-m2.5</div>
+        <div class="ad-desc">Extrait et normalise les données brutes des offres en fiches structurées et exploitables.</div>
+      </div>
+      <div class="agent-detail">
+        <div class="ad-icon">📊</div>
+        <div class="ad-name">AnalystAgent</div>
+        <div class="ad-model">GPT-4o-mini</div>
+        <div class="ad-desc">Calcule un score de compatibilité hybride entre chaque offre et votre profil, avec explication.</div>
+      </div>
+      <div class="agent-detail">
+        <div class="ad-icon">🎯</div>
+        <div class="ad-name">CoachAgent</div>
+        <div class="ad-model">RAG + ChromaDB + GPT-4o-mini</div>
+        <div class="ad-desc">Génère des quiz de préparation entretien personnalisés et analyse vos réponses avec score automatique.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing-section" id="pricing">
+  <div class="container">
+    <span class="section-label">Tarification</span>
+    <h2 class="section-title">Des offres adaptées<br>à chaque profil.</h2>
+    <p class="section-sub">Commencez gratuitement et upgradez quand vous êtes prêt. Paiement possible via Mobile Money (Orange, MTN).</p>
+
+    <div class="pricing-grid">
+
+      <!-- FREE -->
+      <div class="pricing-card">
+        <div class="plan-name">Gratuit</div>
+        <div class="plan-desc">Idéal pour tester la plateforme et lancer vos premières recherches.</div>
+        <div class="plan-price">0</div>
+        <div class="plan-period">FCFA / mois</div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> 1 analyse de CV par mois</li>
+          <li><span class="check">✓</span> 10 offres scrappées / session</li>
+          <li><span class="check">✓</span> Score de compatibilité basique</li>
+          <li><span class="check">✓</span> 5 questions de coaching</li>
+          <li><span class="cross">✗</span> Historique des offres</li>
+          <li><span class="cross">✗</span> Support prioritaire</li>
+        </ul>
+        <a href="#" onclick="window.parent.postMessage({type: 'navigate_login'}, '*'); return false;" class="btn-plan btn-plan-outline">Commencer gratuitement</a>
+      </div>
+
+      <!-- PRO (popular) -->
+      <div class="pricing-card popular">
+        <div class="popular-badge">⭐ Populaire</div>
+        <div class="plan-name">Professionnel</div>
+        <div class="plan-desc">Pour les chercheurs d'emploi sérieux qui veulent maximiser leurs chances.</div>
+        <div class="plan-price">4 900</div>
+        <div class="plan-period">FCFA / mois — ~8 500 FCFA / trimestre</div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> Analyses de CV illimitées</li>
+          <li><span class="check">✓</span> +200 offres scrappées / session</li>
+          <li><span class="check">✓</span> Score hybride avancé (40%+60%)</li>
+          <li><span class="check">✓</span> Coaching illimité (QCM + score)</li>
+          <li><span class="check">✓</span> Historique complet des offres</li>
+          <li><span class="cross">✗</span> Support prioritaire</li>
+        </ul>
+        <a href="#" onclick="window.parent.postMessage({type: 'navigate_login'}, '*'); return false;" class="btn-plan btn-plan-accent">Démarrer l'essai 7 jours</a>
+      </div>
+
+      <!-- PREMIUM -->
+      <div class="pricing-card">
+        <div class="plan-name">Premium</div>
+        <div class="plan-desc">La solution complète pour les entreprises et les cabinets de recrutement.</div>
+        <div class="plan-price">12 500</div>
+        <div class="plan-period">FCFA / mois — ~35 000 FCFA / trimestre</div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> Tout du plan Professionnel</li>
+          <li><span class="check">✓</span> Multi-profils (jusqu'à 10 CVs)</li>
+          <li><span class="check">✓</span> API access & intégrations</li>
+          <li><span class="check">✓</span> Tableau de bord analytique</li>
+          <li><span class="check">✓</span> Support prioritaire 24h/7j</li>
+          <li><span class="check">✓</span> Onboarding personnalisé</li>
+        </ul>
+        <a href="#" onclick="window.parent.postMessage({type: 'navigate_login'}, '*'); return false;" class="btn-plan btn-plan-outline">Contacter l'équipe</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- CTA BANNER -->
+<section class="cta-section">
+  <h2>Votre prochain emploi<br>est à <em style="color:var(--accent);font-style:normal">un clic</em>.</h2>
+  <p>Rejoignez les premiers utilisateurs de JobAgentAI et laissez l'IA travailler pour vous sur le marché camerounais.</p>
+  <div class="hero-cta">
+    <a href="#" onclick="window.parent.postMessage({type: 'navigate_login'}, '*'); return false;" class="btn-primary">Créer un compte gratuit</a>
+    <a href="#" onclick="window.parent.postMessage({type: 'navigate_login'}, '*'); return false;" class="btn-outline">Voir une démo →</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo"><span>JobAgent</span>AI</div>
+  <p style="font-size:.85rem; color:var(--muted)">By <strong style="color:var(--text)">Mainto Studio</strong> · Copyright © 2026</p>
+</footer>
+
+<script>
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    document.getElementById('theme-icon').textContent  = isDark ? '🌙' : '☀️';
+    document.getElementById('theme-label').textContent = isDark ? 'Mode Sombre' : 'Mode Clair';
+  }
+
+  // Scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.feature-card, .step, .agent-detail, .pricing-card, .stat-num').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    el.style.transition = 'opacity .6s ease, transform .6s ease';
+    observer.observe(el);
+  });
+</script>
+</body>
+</html>

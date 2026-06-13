@@ -1,0 +1,33 @@
+# Environnement virtuel
+.venv/
+venv/
+ENV/
+env/
+
+# Fichiers de configuration / Secrets
+.env
+*.env
+serviceAccountKey.json
+.streamlit/secrets.toml
+
+# Caches et fichiers temporaires Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Données locales et base de données vectorielle
+.chroma/
+chroma.db
+chromadb/
+data/*.db
+data/*.sqlite
+data/*.json
+
+# IDE / Système
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
