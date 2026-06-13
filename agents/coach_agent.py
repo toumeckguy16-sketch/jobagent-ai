@@ -9,10 +9,16 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
-from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
-import chromadb
+
+CHROMA_AVAILABLE = False
+try:
+    from langchain_community.vectorstores import Chroma
+    import chromadb
+    CHROMA_AVAILABLE = True
+except Exception as e:
+    print(f"ChromaDB non disponible (erreur d'importation, p.ex. incompatibilite Protobuf) : {e}")
 class CoachAgent:
     """
     Agent Coach utilisant RAG (Retrieval-Augmented Generation).
@@ -188,6 +194,10 @@ Niveau d'éducation : {skills.get('education_level', '')}
 Langues : {', '.join(skills.get('languages', []))}
 """
         self.raw_job_text = job_text
+        if not CHROMA_AVAILABLE:
+            self.vectorstore = None
+            return
+
         try:
             docs = self.text_splitter.create_documents(
                 [job_text],
@@ -200,7 +210,7 @@ Langues : {', '.join(skills.get('languages', []))}
                 collection_name="job_offers"
             )
         except Exception as e:
-            print(f"Indexation ignorée (Erreur quota ?) : {e}")
+            print(f"Indexation ignoree (Erreur quota ?) : {e}")
             self.vectorstore = None
 
     def _retrieve_context(self, query: str, k: int = 3) -> str:
