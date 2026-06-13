@@ -63,7 +63,7 @@ defaults = {
     "logged_in": False,
     "user":      None,
     "theme":     st.session_state.get("theme", "dark"),
-    "use_mock":  os.getenv("USE_MOCK_MODE", "False") == "True",
+    "use_mock":  os.getenv("USE_MOCK_MODE", "False").lower() == "true",
 }
 for key, val in defaults.items():
     if key not in st.session_state:
