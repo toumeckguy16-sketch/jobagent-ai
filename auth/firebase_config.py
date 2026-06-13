@@ -9,18 +9,19 @@ import firebase_admin
 from firebase_admin import credentials, firestore, auth as fb_auth
 from pathlib import Path
 
-# ── Chemin vers le fichier JSON ──────────────────────────────
+# --- Chemin vers le fichier JSON ---
 BASE_DIR    = Path(__file__).resolve().parent
 SERVICE_KEY = BASE_DIR / "serviceAccountKey.json"
 
-# ── Clients globaux ───────────────────────────────────────────
+# --- Clients globaux ---
 _real_db = None
 firebase = None
+_init_errors = []
 
 def init_firebase():
-    global _real_db, firebase
+    global _real_db, firebase, _init_errors
     if not firebase_admin._apps:
-        # ── Priorité 1 : fichier JSON local (dev local) ──
+        # --- Priorite 1 : fichier JSON local (dev local) ---
         if SERVICE_KEY.exists():
             try:
                 cred = credentials.Certificate(str(SERVICE_KEY))
@@ -28,28 +29,29 @@ def init_firebase():
                 _real_db = firestore.client()
                 return _real_db
             except Exception as e:
-                print(f"Erreur d'initialisation avec serviceAccountKey.json : {e}")
+                err = f"Fichier JSON local : {e}"
+                print(err)
+                _init_errors.append(err)
+        else:
+            _init_errors.append("Fichier JSON local : serviceAccountKey.json introuvable.")
         
-        # ── Priorité 2 : FIREBASE_SERVICE_ACCOUNT_JSON (Streamlit secrets ou env) ──
-        # On essaie d'abord de récupérer via streamlit secrets, puis via os.environ
+        # --- Priorite 2 : FIREBASE_SERVICE_ACCOUNT_JSON (Streamlit secrets ou env) ---
         service_account_json = None
         try:
             import streamlit as st
             if "FIREBASE_SERVICE_ACCOUNT_JSON" in st.secrets:
                 service_account_json = st.secrets["FIREBASE_SERVICE_ACCOUNT_JSON"]
-        except Exception:
-            pass
+        except Exception as e:
+            _init_errors.append(f"Lecture streamlit.secrets (FIREBASE_SERVICE_ACCOUNT_JSON) echouee : {e}")
             
         if not service_account_json:
             service_account_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON", "")
             
         if service_account_json:
             try:
-                # Si c'est un chemin de fichier, ou directement le contenu JSON
                 if service_account_json.strip().startswith("{"):
                     service_account_info = json.loads(service_account_json)
                 else:
-                    # C'est peut-être un chemin vers un fichier
                     with open(service_account_json, 'r', encoding='utf-8') as f:
                         service_account_info = json.load(f)
                 cred = credentials.Certificate(service_account_info)
@@ -57,9 +59,13 @@ def init_firebase():
                 _real_db = firestore.client()
                 return _real_db
             except Exception as e:
-                print(f"Erreur d'initialisation avec FIREBASE_SERVICE_ACCOUNT_JSON : {e}")
+                err = f"FIREBASE_SERVICE_ACCOUNT_JSON (env/secret) : {e}"
+                print(err)
+                _init_errors.append(err)
+        else:
+            _init_errors.append("FIREBASE_SERVICE_ACCOUNT_JSON : Non configure (absent de st.secrets et os.environ).")
 
-        # ── Priorité 3 : variables d'environnement individuelles / secrets Streamlit ──
+        # --- Priorite 3 : variables d'environnement individuelles / secrets Streamlit ---
         def get_secret(key):
             try:
                 import streamlit as st
@@ -71,7 +77,6 @@ def init_firebase():
 
         private_key = get_secret("FIREBASE_PRIVATE_KEY")
         if private_key:
-            # Streamlit/env stocke parfois les sauts de ligne comme \\n
             private_key = private_key.replace("\\n", "\n")
             try:
                 service_account_info = {
@@ -92,12 +97,16 @@ def init_firebase():
                 _real_db = firestore.client()
                 return _real_db
             except Exception as e:
-                print(f"Erreur d'initialisation avec variables individuelles : {e}")
+                err = f"Variables individuelles (env/secret) : {e}"
+                print(err)
+                _init_errors.append(err)
+        else:
+            _init_errors.append("Variables individuelles : FIREBASE_PRIVATE_KEY non configure.")
 
-        # Si on arrive ici, aucune méthode n'a fonctionné
+        # Si on arrive ici, aucune methode n'a fonctionne
+        errors_str = "\n  - ".join(_init_errors)
         raise ValueError(
-            "Firebase non configuré : serviceAccountKey.json absent, "
-            "FIREBASE_SERVICE_ACCOUNT_JSON absent, et variables d'environnement manquantes ou invalides."
+            f"Firebase non configure. Details des tentatives :\n  - {errors_str}"
         )
     else:
         firebase = firebase_admin.get_app()
@@ -118,23 +127,24 @@ class FirestoreProxy:
     def __getattr__(self, name):
         client = get_db()
         if client is None:
+            errors_str = "\n  - ".join(_init_errors)
             raise RuntimeError(
-                "Le client Firestore n'a pas pu être initialisé. "
-                "Veuillez vérifier que le fichier serviceAccountKey.json est présent ou "
-                "que le secret FIREBASE_SERVICE_ACCOUNT_JSON (ou les variables individuelles) est configuré."
+                "Le client Firestore n'a pas pu etre initialise.\n"
+                "Veuillez configurer correctement Firebase sur Streamlit Cloud dans vos Secrets.\n"
+                f"Details des erreurs rencontrees :\n  - {errors_str}"
             )
         return getattr(client, name)
 
     def __bool__(self):
         return get_db() is not None
 
-# L'instance de proxy exportée pour tout le projet
+# L'instance de proxy exportee pour tout le projet
 db = FirestoreProxy()
 
-# ── Initialisation au chargement ─────────────────────────────
+# --- Initialisation au chargement ---
 try:
     init_firebase()
-    print("Firebase initialisé avec succès")
+    print("Firebase initialise avec succes")
 except Exception as e:
-    print(f"Avertissement Firebase à l'importation : {e}")
+    print(f"Avertissement Firebase a l'importation : {e}")
     _real_db = None
