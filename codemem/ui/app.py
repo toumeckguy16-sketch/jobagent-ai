@@ -332,10 +332,16 @@ def show_job_analysis(job):
         </div>
         """, unsafe_allow_html=True)
         
-        vector_score = job.get("vector_score", "N/A")
-        llm_score = job.get("llm_score", "N/A")
-        vec_display = f"{vector_score}%" if isinstance(vector_score, (int, float)) else vector_score
-        llm_display = f"{llm_score}%" if isinstance(llm_score, (int, float)) else llm_score
+        vector_score = job.get("vector_score")
+        llm_score = job.get("llm_score")
+        if isinstance(vector_score, (int, float)) and isinstance(llm_score, (int, float)):
+            weighted_vector = round(vector_score * 0.4, 1)
+            weighted_llm = round(llm_score * 0.6, 1)
+            vec_display = f"{weighted_vector}% (sur 40%)"
+            llm_display = f"{weighted_llm}% (sur 60%)"
+        else:
+            vec_display = "N/A"
+            llm_display = "N/A"
         
         st.markdown(f"""
         <div style='text-align:center; margin-top:8px; font-family:Roboto,sans-serif; font-size:0.85em; color:{T["text_main"]}; line-height:1.4;'>
