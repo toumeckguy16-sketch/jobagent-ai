@@ -335,10 +335,10 @@ def show_job_analysis(job):
         vector_score = job.get("vector_score")
         llm_score = job.get("llm_score")
         if isinstance(vector_score, (int, float)) and isinstance(llm_score, (int, float)):
-            weighted_vector = round(vector_score * 0.4, 1)
-            weighted_llm = round(llm_score * 0.6, 1)
-            vec_display = f"{weighted_vector}% (sur 40%)"
-            llm_display = f"{weighted_llm}% (sur 60%)"
+            val_vector = int(round(vector_score * 0.4))
+            val_llm = score - val_vector
+            vec_display = f"{val_vector}/40"
+            llm_display = f"{val_llm}/60"
         else:
             vec_display = "N/A"
             llm_display = "N/A"
