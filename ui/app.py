@@ -331,6 +331,18 @@ def show_job_analysis(job):
             <div style='color:{T["text_muted"]}; font-size:0.8em;'>Match</div>
         </div>
         """, unsafe_allow_html=True)
+        
+        vector_score = job.get("vector_score", "N/A")
+        llm_score = job.get("llm_score", "N/A")
+        vec_display = f"{vector_score}%" if isinstance(vector_score, (int, float)) else vector_score
+        llm_display = f"{llm_score}%" if isinstance(llm_score, (int, float)) else llm_score
+        
+        st.markdown(f"""
+        <div style='text-align:center; margin-top:8px; font-family:Roboto,sans-serif; font-size:0.85em; color:{T["text_main"]}; line-height:1.4;'>
+            Score vectoriel : <strong>{vec_display}</strong><br>
+            Score LLM : <strong>{llm_display}</strong>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col_s2:
         st.markdown(f"**Localisation :** {job.get('location', 'N/A')}")

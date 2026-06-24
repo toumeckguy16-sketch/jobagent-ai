@@ -136,9 +136,12 @@ Donne ton évaluation en JSON."""
         scores = [85, 72, 60]
         results = []
         for i, job in enumerate(jobs):
+            score = scores[i % len(scores)]
             results.append({
                 **job,
-                "score":           scores[i % len(scores)],
+                "score":           score,
+                "vector_score":    score - 3,
+                "llm_score":       score + 2,
                 "matching_skills": ["Python", "SQL"],
                 "missing_skills":  ["TensorFlow"],
                 "strengths":       ["Bonne base en data science", "Profil polyvalent"],
