@@ -751,14 +751,19 @@ div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p {{
 }}
 
 /* === STYLE DU POPUP (MODAL) === */
-div[data-testid="stDialog"], 
-div[data-testid="stModal"] {{
+[data-testid="stDialog"], 
+[data-testid="stModal"] {{
     background-color: transparent !important;
 }}
 
 div[data-baseweb="backdrop"],
 dialog::backdrop,
-div[data-testid="stDialog"]::backdrop,
+[data-testid="stDialog"]::backdrop,
+div[data-modal-backdrop],
+[data-modal-backdrop],
+div[data-modal-container] div[data-modal-backdrop],
+div[data-modal-container="true"] > div:first-child,
+div[data-modal-container] > div:first-child,
 div[data-modal-container],
 [data-modal-container] {{
     background-color: {T['bg_backdrop']} !important;
