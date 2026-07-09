@@ -756,7 +756,11 @@ div[data-testid="stModal"] {{
     background-color: transparent !important;
 }}
 
-div[data-baseweb="backdrop"] {{
+div[data-baseweb="backdrop"],
+dialog::backdrop,
+div[data-testid="stDialog"]::backdrop,
+div[data-modal-container],
+[data-modal-container] {
     background-color: {T['bg_backdrop']} !important;
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
