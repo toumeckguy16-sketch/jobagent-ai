@@ -1,4 +1,4 @@
-﻿"""
+"""
 ui/login_page.py
 Page de connexion — Email/Password + Google OAuth
 Thème dynamique (sombre/clair) identique à app.py
@@ -278,7 +278,13 @@ def render_login_page():
                     with st.spinner("Connexion en cours..."):
                         result = AuthManager.login(login_email, login_password)
                     if result["success"]:
-                        st.session_state.user      = result["user"]
+                        st.session_state.user = result["user"]
+                        _email_clean = (login_email or "").lower().strip()
+                        if _email_clean == "toumeckguy16@gmail.com":
+                            st.session_state.user_role = "admin"
+                            st.session_state.current_page = "AdminAbonnements"
+                        else:
+                            st.session_state.user_role = "user"
                         st.session_state.is_new_user = False
                         st.session_state.logged_in = True
                         st.rerun()

@@ -217,10 +217,12 @@ def init_session():
                 pass  # Conserver l'historique en mémoire si Firebase indisponible
 
         # ── Chargement des informations freemium (role, cycles, abonnement) ──
+        _current_u_email = ((st.session_state.user.get("email") or "") if isinstance(st.session_state.get("user"), dict) else "").lower().strip()
+        _is_admin_em = _current_u_email == "toumeckguy16@gmail.com"
         if not st.session_state.get("user_info_loaded"):
             try:
                 user_info = AuthManager.get_user_info(uid)
-                st.session_state.user_role = user_info.get("role", "user")
+                st.session_state.user_role = "admin" if _is_admin_em else user_info.get("role", "user")
                 st.session_state.cycles_used = user_info.get("cycles_used", 0)
                 st.session_state.subscription_status = user_info.get("subscription_status", "free")
                 st.session_state.subscription_expiry = user_info.get("subscription_expiry", None)
@@ -1038,10 +1040,20 @@ if st.session_state.get("network_error_count", 0) > 0:
 # ============================================================
 # FONCTION PIPELINE DE RECHERCHE
 # ============================================================
+def is_admin_user() -> bool:
+    """Retourne True si l'utilisateur courant a le rôle admin."""
+    if st.session_state.get("user_role") == "admin":
+        return True
+    u = st.session_state.get("user")
+    if isinstance(u, dict) and (u.get("email") or "").lower().strip() == "toumeckguy16@gmail.com":
+        st.session_state.user_role = "admin"
+        return True
+    return False
+
+
 def check_freemium_access() -> bool:
     """Vérifie si l'utilisateur est autorisé à utiliser les agents."""
-    role = st.session_state.get("user_role", "user")
-    if role == "admin":
+    if is_admin_user():
         return True
     cycles_used = st.session_state.get("cycles_used", 0)
     sub_status = st.session_state.get("subscription_status", "free")
@@ -1143,7 +1155,7 @@ with st.sidebar:
     nav_button("◌", "Préparer l'entretien", "Préparation à l'entretien")
     nav_button("⚙", "Paramètres", "Paramètres")
     nav_button("◈", "Abonnement", "Abonnement")
-    if st.session_state.get("user_role") == "admin":
+    if is_admin_user():
         nav_button("⊛", "Validation Abonnements", "AdminAbonnements")
 
     # Espace réduit — profil remonté
@@ -2686,42 +2698,66 @@ elif page == "Abonnement":
     _cycles_a      = st.session_state.get("cycles_used", 0)
     _cycles_left_a = max(0, 2 - _cycles_a)
 
-    if _sub_status_a == "active" and _sub_expiry_a:
+    _txt_main = T['text_main']
+    _txt_muted = T['text_muted']
+    _txt_subtle = T['text_subtle']
+    _accent_col = T['accent']
+    _succ_col = T['success']
+    _err_col = T['error']
+    _border_col = T['border']
+    _bg_main = T['bg_main']
+
+    if is_admin_user():
+        _stat_html = (
+            f"<div class='card-accent' style='margin-bottom:24px;'>"
+            f"<div style='color:{_txt_subtle}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Votre statut</div>"
+            f"<div style='display:flex; align-items:center; gap:12px;'>"
+            f"<div style='background:{_accent_col}22; color:{_accent_col}; border:1px solid {_accent_col}44; padding:6px 16px; border-radius:20px; font-weight:700; font-size:0.9em;'>Compte Administrateur</div>"
+            f"<div style='color:{_succ_col}; font-size:0.9em; font-weight:700;'>Accès total illimité</div>"
+            f"</div>"
+            f"</div>"
+        )
+        st.markdown(_stat_html, unsafe_allow_html=True)
+    elif _sub_status_a == "active" and _sub_expiry_a:
         try:
             from datetime import datetime as _dta
             _expiry_str_a = _dta.fromisoformat(_sub_expiry_a).strftime("%d/%m/%Y")
         except Exception:
             _expiry_str_a = str(_sub_expiry_a)
-        st.markdown(f"""
-        <div class='card-accent' style='margin-bottom:24px;'>
-            <div style='color:{T["text_subtle"]}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Votre abonnement</div>
-            <div style='display:flex; align-items:center; gap:12px; flex-wrap:wrap;'>
-                <div style='background:{T["success"]}22; color:{T["success"]}; border:1px solid {T["success"]}44; padding:6px 16px; border-radius:20px; font-weight:700; font-size:0.9em;'>✓ Actif</div>
-                <div style='color:{T["text_main"]}; font-size:1em; font-weight:700;'>{_plan_type_a or "Pro"}</div>
-            </div>
-            <div style='color:{T["text_muted"]}; font-size:0.85em; margin-top:8px;'>Valide jusqu'au <strong>{_expiry_str_a}</strong></div>
-        </div>
-        """, unsafe_allow_html=True)
+        _pl_name = _plan_type_a or "Pro"
+        _stat_html = (
+            f"<div class='card-accent' style='margin-bottom:24px;'>"
+            f"<div style='color:{_txt_subtle}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Votre abonnement</div>"
+            f"<div style='display:flex; align-items:center; gap:12px; flex-wrap:wrap;'>"
+            f"<div style='background:{_succ_col}22; color:{_succ_col}; border:1px solid {_succ_col}44; padding:6px 16px; border-radius:20px; font-weight:700; font-size:0.9em;'>✓ Actif</div>"
+            f"<div style='color:{_txt_main}; font-size:1em; font-weight:700;'>{_pl_name}</div>"
+            f"</div>"
+            f"<div style='color:{_txt_muted}; font-size:0.85em; margin-top:8px;'>Valide jusqu'au <strong>{_expiry_str_a}</strong></div>"
+            f"</div>"
+        )
+        st.markdown(_stat_html, unsafe_allow_html=True)
     elif _sub_status_a == "expired":
-        st.markdown(f"""
-        <div class='card-accent' style='margin-bottom:24px; border-top-color:{T["error"]};'>
-            <div style='color:{T["text_subtle"]}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Votre abonnement</div>
-            <div style='background:{T["error"]}22; color:{T["error"]}; border:1px solid {T["error"]}44; padding:6px 16px; border-radius:20px; font-weight:700; font-size:0.9em; display:inline-block;'>⚠ Expiré</div>
-            <div style='color:{T["text_muted"]}; font-size:0.85em; margin-top:8px;'>Votre abonnement a expiré. Renouvelez pour un accès illimité.</div>
-        </div>
-        """, unsafe_allow_html=True)
+        _stat_html = (
+            f"<div class='card-accent' style='margin-bottom:24px; border-top-color:{_err_col};'>"
+            f"<div style='color:{_txt_subtle}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Votre abonnement</div>"
+            f"<div style='background:{_err_col}22; color:{_err_col}; border:1px solid {_err_col}44; padding:6px 16px; border-radius:20px; font-weight:700; font-size:0.9em; display:inline-block;'>⚠ Expiré</div>"
+            f"<div style='color:{_txt_muted}; font-size:0.85em; margin-top:8px;'>Votre abonnement a expiré. Renouvelez pour un accès illimité.</div>"
+            f"</div>"
+        )
+        st.markdown(_stat_html, unsafe_allow_html=True)
     else:
-        _color_cycles_a = T["success"] if _cycles_left_a > 0 else T["error"]
-        st.markdown(f"""
-        <div class='card-accent' style='margin-bottom:24px;'>
-            <div style='color:{T["text_subtle"]}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Votre abonnement</div>
-            <div style='display:flex; align-items:center; gap:12px;'>
-                <div style='background:{T["border"]}; color:{T["text_main"]}; border:1px solid {T["border"]}; padding:6px 16px; border-radius:20px; font-weight:700; font-size:0.9em;'>Gratuit</div>
-                <div style='color:{_color_cycles_a}; font-size:0.9em; font-weight:700;'>{_cycles_left_a} utilisation(s) gratuite(s) restante(s)</div>
-            </div>
-            <div style='color:{T["text_muted"]}; font-size:0.82em; margin-top:8px;'>Chaque cycle complet (recherche → analyse → coaching) consomme 1 utilisation.</div>
-        </div>
-        """, unsafe_allow_html=True)
+        _col_cyc = _succ_col if _cycles_left_a > 0 else _err_col
+        _stat_html = (
+            f"<div class='card-accent' style='margin-bottom:24px;'>"
+            f"<div style='color:{_txt_subtle}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Votre abonnement</div>"
+            f"<div style='display:flex; align-items:center; gap:12px;'>"
+            f"<div style='background:{_border_col}; color:{_txt_main}; border:1px solid {_border_col}; padding:6px 16px; border-radius:20px; font-weight:700; font-size:0.9em;'>Gratuit</div>"
+            f"<div style='color:{_col_cyc}; font-size:0.9em; font-weight:700;'>{_cycles_left_a} utilisation(s) gratuite(s) restante(s)</div>"
+            f"</div>"
+            f"<div style='color:{_txt_muted}; font-size:0.82em; margin-top:8px;'>Chaque cycle complet (recherche → analyse → coaching) consomme 1 utilisation.</div>"
+            f"</div>"
+        )
+        st.markdown(_stat_html, unsafe_allow_html=True)
 
     # Etat du formulaire paiement
     for _k, _v in [("abo_selected_plan", None), ("abo_show_form", False), ("abo_payment_sent", False)]:
@@ -2729,40 +2765,46 @@ elif page == "Abonnement":
             st.session_state[_k] = _v
 
     _plans_a = [
-        {"id": "pro_mensuel", "nom": "Professionnel", "sous_titre": "Pour les chercheurs d'emploi serieux",
+        {"id": "pro_mensuel", "nom": "Professionnel", "sous_titre": "Pour les chercheurs d'emploi sérieux",
          "prix": "4 900", "periode": "FCFA / mois", "montant": 4900.0, "popular": True,
-         "features": ["Analyses de CV illimitees", "+200 offres / session", "Score hybride avance", "Coaching illimite (QCM + score)", "Historique complet des offres"]},
-        {"id": "pro_trimestriel", "nom": "Pro Trimestriel", "sous_titre": "Economisez sur 3 mois",
+         "features": ["Analyses de CV illimitées", "+200 offres / session", "Score hybride avancé", "Coaching illimité (QCM + score)", "Historique complet des offres"]},
+        {"id": "pro_trimestriel", "nom": "Pro Trimestriel", "sous_titre": "Économisez sur 3 mois",
          "prix": "8 500", "periode": "FCFA / trimestre", "montant": 8500.0, "popular": False,
-         "features": ["Tout du plan Pro", "~2 833 FCFA / mois", "3 mois d'acces illimite", "Coaching illimite", "Historique complet"]},
-        {"id": "premium_mensuel", "nom": "Premium", "sous_titre": "La solution complete",
+         "features": ["Tout du plan Pro", "~2 833 FCFA / mois", "3 mois d'accès illimité", "Coaching illimité", "Historique complet"]},
+        {"id": "premium_mensuel", "nom": "Premium", "sous_titre": "La solution complète",
          "prix": "12 500", "periode": "FCFA / mois", "montant": 12500.0, "popular": False,
-         "features": ["Tout du plan Pro", "Multi-profils (10 CVs)", "API access & integrations", "Dashboard analytique", "Support prioritaire 24h/7j"]},
-        {"id": "premium_trimestriel", "nom": "Premium Trimestriel", "sous_titre": "Economisez sur 3 mois",
+         "features": ["Tout du plan Pro", "Multi-profils (10 CVs)", "API access & intégrations", "Dashboard analytique", "Support prioritaire 24h/7j"]},
+        {"id": "premium_trimestriel", "nom": "Premium Trimestriel", "sous_titre": "Économisez sur 3 mois",
          "prix": "35 000", "periode": "FCFA / trimestre", "montant": 35000.0, "popular": False,
-         "features": ["Tout du plan Premium", "~11 667 FCFA / mois", "3 mois d'acces illimite", "Support 24h/7j", "Onboarding personnalise"]},
+         "features": ["Tout du plan Premium", "~11 667 FCFA / mois", "3 mois d'accès illimité", "Support 24h/7j", "Onboarding personnalisé"]},
     ]
 
     if not st.session_state.abo_show_form and not st.session_state.abo_payment_sent:
-        st.markdown(f"""
-        <div style='font-family:Roboto,sans-serif; font-size:1.05em; font-weight:700; color:{T["text_main"]}; margin:20px 0 6px;'>Choisissez votre offre</div>
-        <div style='color:{T["text_muted"]}; font-size:0.82em; margin-bottom:16px;'>Paiement via Mobile Money (Orange Money / MTN MoMo Cameroun)</div>
-        """, unsafe_allow_html=True)
+        _header_html = (
+            f"<div style='font-family:Roboto,sans-serif; font-size:1.05em; font-weight:700; color:{_txt_main}; margin:20px 0 6px;'>Choisissez votre offre</div>"
+            f"<div style='color:{_txt_muted}; font-size:0.82em; margin-bottom:16px;'>Paiement via Mobile Money (Orange Money / MTN MoMo Cameroun)</div>"
+        )
+        st.markdown(_header_html, unsafe_allow_html=True)
         _c1, _c2 = st.columns(2)
         for _ip, _pl in enumerate(_plans_a):
             _c = _c1 if _ip % 2 == 0 else _c2
             with _c:
-                _popular_html = f"<div style='background:{T['accent']}; color:white; font-size:0.7em; font-weight:700; padding:3px 10px; border-radius:20px; display:inline-block; margin-bottom:10px;'>Populaire</div>" if _pl["popular"] else ""
-                _feats_html = "".join([f"<div style='font-size:0.82em; color:{T['text_muted']}; padding:2px 0;'>✓ {_f}</div>" for _f in _pl["features"]])
-                st.markdown(f"""
-                <div class='card-accent' style='min-height:240px;'>
-                    {_popular_html}
-                    <div style='font-family:Roboto,sans-serif; font-size:0.95em; font-weight:800; color:{T["text_main"]}; margin-bottom:2px;'>{_pl["nom"]}</div>
-                    <div style='color:{T["text_muted"]}; font-size:0.78em; margin-bottom:10px;'>{_pl["sous_titre"]}</div>
-                    <div style='font-size:1.5em; font-weight:900; color:{T["accent"]}; font-family:Roboto,sans-serif;'>{_pl["prix"]} <span style='font-size:0.4em; color:{T["text_muted"]}; font-weight:400;'>{_pl["periode"]}</span></div>
-                    <div style='margin-top:10px;'>{_feats_html}</div>
-                </div>
-                """, unsafe_allow_html=True)
+                _pop_div = f"<div style='background:{_accent_col}; color:white; font-size:0.7em; font-weight:700; padding:3px 10px; border-radius:20px; display:inline-block; margin-bottom:10px;'>⭐ Populaire</div>" if _pl['popular'] else ""
+                _f_items = "".join([f"<div style='font-size:0.82em; color:{_txt_muted}; padding:2px 0;'>✓ {_f}</div>" for _f in _pl['features']])
+                _pl_nom = _pl['nom']
+                _pl_sub = _pl['sous_titre']
+                _pl_prix = _pl['prix']
+                _pl_per = _pl['periode']
+                _card_markup = (
+                    f"<div class='card-accent' style='min-height:240px;'>"
+                    f"{_pop_div}"
+                    f"<div style='font-family:Roboto,sans-serif; font-size:0.95em; font-weight:800; color:{_txt_main}; margin-bottom:2px;'>{_pl_nom}</div>"
+                    f"<div style='color:{_txt_muted}; font-size:0.78em; margin-bottom:10px;'>{_pl_sub}</div>"
+                    f"<div style='font-size:1.5em; font-weight:900; color:{_accent_col}; font-family:Roboto,sans-serif;'>{_pl_prix} <span style='font-size:0.4em; color:{_txt_muted}; font-weight:400;'>{_pl_per}</span></div>"
+                    f"<div style='margin-top:10px;'>{_f_items}</div>"
+                    f"</div>"
+                )
+                st.markdown(_card_markup, unsafe_allow_html=True)
                 _bt = "primary" if _pl["popular"] else "secondary"
                 if st.button(f"Choisir {_pl['nom']}", key=f"plan_{_pl['id']}", use_container_width=True, type=_bt):
                     st.session_state.abo_selected_plan = _pl
@@ -2771,31 +2813,35 @@ elif page == "Abonnement":
 
     if st.session_state.abo_show_form and st.session_state.abo_selected_plan and not st.session_state.abo_payment_sent:
         _pl = st.session_state.abo_selected_plan
-        st.markdown(f"""
-        <div class='card-accent' style='margin-bottom:8px;'>
-            <div style='color:{T["text_subtle"]}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Plan choisi</div>
-            <div style='font-family:Roboto,sans-serif; font-size:1.05em; font-weight:800; color:{T["text_main"]};'>{_pl["nom"]} — {_pl["prix"]} {_pl["periode"]}</div>
-        </div>
-        <div class='card' style='margin-bottom:16px;'>
-            <div style='font-weight:700; font-size:0.95em; color:{T["text_main"]}; margin-bottom:12px;'>Deposez le montant sur l un de ces numeros Mobile Money :</div>
-            <div style='display:flex; gap:20px; flex-wrap:wrap;'>
-                <div style='background:{T["bg_main"]}; border:2px solid {T["accent"]}; border-radius:12px; padding:14px 22px; text-align:center;'>
-                    <div style='font-size:0.72em; color:{T["text_muted"]}; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;'>Orange Money</div>
-                    <div style='font-size:1.4em; font-weight:900; color:{T["accent"]}; font-family:Roboto,sans-serif; letter-spacing:2px;'>653 301 970</div>
-                </div>
-                <div style='background:{T["bg_main"]}; border:2px solid {T["accent"]}; border-radius:12px; padding:14px 22px; text-align:center;'>
-                    <div style='font-size:0.72em; color:{T["text_muted"]}; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;'>MTN Mobile Money</div>
-                    <div style='font-size:1.4em; font-weight:900; color:{T["accent"]}; font-family:Roboto,sans-serif; letter-spacing:2px;'>690 380 150</div>
-                </div>
-            </div>
-            <div style='color:{T["text_muted"]}; font-size:0.82em; margin-top:10px;'>Conservez la confirmation de votre transaction avant de remplir le formulaire.</div>
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown(f"<div style='font-weight:700; color:{T['text_main']}; margin-bottom:10px;'>Confirmer votre transaction</div>", unsafe_allow_html=True)
+        _pl_nom = _pl['nom']
+        _pl_prix = _pl['prix']
+        _pl_per = _pl['periode']
+        _choice_box = (
+            f"<div class='card-accent' style='margin-bottom:8px;'>"
+            f"<div style='color:{_txt_subtle}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Plan choisi</div>"
+            f"<div style='font-family:Roboto,sans-serif; font-size:1.05em; font-weight:800; color:{_txt_main};'>{_pl_nom} — {_pl_prix} {_pl_per}</div>"
+            f"</div>"
+            f"<div class='card' style='margin-bottom:16px;'>"
+            f"<div style='font-weight:700; font-size:0.95em; color:{_txt_main}; margin-bottom:12px;'>Déposez le montant sur l'un de ces numéros Mobile Money :</div>"
+            f"<div style='display:flex; gap:20px; flex-wrap:wrap;'>"
+            f"<div style='background:{_bg_main}; border:2px solid {_accent_col}; border-radius:12px; padding:14px 22px; text-align:center;'>"
+            f"<div style='font-size:0.72em; color:{_txt_muted}; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;'>Orange Money</div>"
+            f"<div style='font-size:1.4em; font-weight:900; color:{_accent_col}; font-family:Roboto,sans-serif; letter-spacing:2px;'>653 301 970</div>"
+            f"</div>"
+            f"<div style='background:{_bg_main}; border:2px solid {_accent_col}; border-radius:12px; padding:14px 22px; text-align:center;'>"
+            f"<div style='font-size:0.72em; color:{_txt_muted}; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;'>MTN Mobile Money</div>"
+            f"<div style='font-size:1.4em; font-weight:900; color:{_accent_col}; font-family:Roboto,sans-serif; letter-spacing:2px;'>690 380 150</div>"
+            f"</div>"
+            f"</div>"
+            f"<div style='color:{_txt_muted}; font-size:0.82em; margin-top:10px;'>Conservez la confirmation de votre transaction avant de remplir le formulaire.</div>"
+            f"</div>"
+            f"<div style='font-weight:700; color:{_txt_main}; margin-bottom:10px;'>Confirmer votre transaction</div>"
+        )
+        st.markdown(_choice_box, unsafe_allow_html=True)
         with st.form("form_payment_confirm"):
             st.text_input("Plan souscrit", value=f"{_pl['nom']} - {_pl['prix']} {_pl['periode']}", disabled=True)
             _date_form = st.date_input("Date de paiement")
-            _montant_form = st.number_input("Montant paye (FCFA)", min_value=0.0, value=_pl["montant"], step=100.0)
+            _montant_form = st.number_input("Montant payé (FCFA)", min_value=0.0, value=_pl["montant"], step=100.0)
             _cs1, _cs2 = st.columns(2)
             with _cs1:
                 _sub = st.form_submit_button("Soumettre la confirmation", type="primary", use_container_width=True)
@@ -2814,23 +2860,24 @@ elif page == "Abonnement":
                     st.session_state.abo_show_form = False
                     st.rerun()
                 else:
-                    st.error("Erreur lors de la soumission. Veuillez reessayer.")
+                    st.error("Erreur lors de la soumission. Veuillez réessayer.")
         if _can:
             st.session_state.abo_show_form = False
             st.session_state.abo_selected_plan = None
             st.rerun()
 
     if st.session_state.abo_payment_sent:
-        st.markdown(f"""
-        <div class='card-accent' style='text-align:center; padding:40px;'>
-            <div style='font-size:2.5em; margin-bottom:16px;'>Success</div>
-            <div style='font-family:Roboto,sans-serif; font-size:1.2em; font-weight:800; color:{T["text_main"]}; margin-bottom:10px;'>Demande soumise avec succes !</div>
-            <div style='color:{T["text_muted"]}; font-size:0.88em; max-width:440px; margin:0 auto;'>
-                Votre demande a bien ete recue. L equipe JobAgent AI va valider votre paiement
-                sous 2h en heures ouvrables. Vous pourrez ensuite utiliser toutes les fonctionnalites sans restriction.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        _succ_card = (
+            f"<div class='card-accent' style='text-align:center; padding:40px;'>"
+            f"<div style='font-size:2.5em; margin-bottom:16px;'>🎉</div>"
+            f"<div style='font-family:Roboto,sans-serif; font-size:1.2em; font-weight:800; color:{_txt_main}; margin-bottom:10px;'>Demande soumise avec succès !</div>"
+            f"<div style='color:{_txt_muted}; font-size:0.88em; max-width:440px; margin:0 auto;'>"
+            f"Votre demande a bien été reçue. L'équipe JobAgent AI va valider votre paiement "
+            f"sous 2h en heures ouvrables. Vous pourrez ensuite utiliser toutes les fonctionnalités sans restriction."
+            f"</div>"
+            f"</div>"
+        )
+        st.markdown(_succ_card, unsafe_allow_html=True)
         if st.button("Retour au tableau de bord", use_container_width=True, type="primary"):
             st.session_state.abo_payment_sent = False
             st.session_state.current_page = "Dashboard"
@@ -2841,9 +2888,13 @@ elif page == "Abonnement":
 # PAGE ADMIN - VALIDATION DES ABONNEMENTS
 # ============================================================
 elif page == "AdminAbonnements":
-    if st.session_state.get("user_role") != "admin":
-        st.error("Acces non autorise.")
+    if not is_admin_user():
+        st.error("Accès réservé aux administrateurs.")
         st.stop()
+
+    _txt_main = T['text_main']
+    _txt_muted = T['text_muted']
+    _txt_subtle = T['text_subtle']
 
     col_b, _ = st.columns([1, 15])
     with col_b:
@@ -2852,7 +2903,8 @@ elif page == "AdminAbonnements":
             st.rerun()
 
     st.markdown("<h1>Validation des Abonnements</h1>", unsafe_allow_html=True)
-    st.markdown(f"<div style='color:{T['text_muted']}; margin-bottom:20px; font-size:0.88em;'>Demandes de paiement Mobile Money en attente de validation.</div>", unsafe_allow_html=True)
+    _sub_desc = f"<div style='color:{_txt_muted}; margin-bottom:20px; font-size:0.88em;'>Demandes de paiement Mobile Money en attente de validation.</div>"
+    st.markdown(_sub_desc, unsafe_allow_html=True)
 
     if st.button("Actualiser", use_container_width=False):
         st.rerun()
@@ -2860,14 +2912,16 @@ elif page == "AdminAbonnements":
     _pending_r = AuthManager.get_pending_payment_requests()
 
     if not _pending_r:
-        st.markdown(f"""
-        <div class='card' style='text-align:center; padding:48px;'>
-            <div style='font-size:2em; margin-bottom:12px;'>OK</div>
-            <div style='color:{T["text_muted"]}; font-size:0.95em;'>Aucune demande en attente.</div>
-        </div>
-        """, unsafe_allow_html=True)
+        _empty_card = (
+            f"<div class='card' style='text-align:center; padding:48px;'>"
+            f"<div style='font-size:2em; margin-bottom:12px;'>🎉</div>"
+            f"<div style='color:{_txt_muted}; font-size:0.95em;'>Aucune demande en attente.</div>"
+            f"</div>"
+        )
+        st.markdown(_empty_card, unsafe_allow_html=True)
     else:
-        st.markdown(f"<div style='font-weight:700; color:{T['text_main']}; margin-bottom:12px;'>{len(_pending_r)} demande(s) en attente</div>", unsafe_allow_html=True)
+        _count_div = f"<div style='font-weight:700; color:{_txt_main}; margin-bottom:12px;'>{len(_pending_r)} demande(s) en attente</div>"
+        st.markdown(_count_div, unsafe_allow_html=True)
         for _req in _pending_r:
             _rid = _req.get("request_id", "")
             _remail = _req.get("user_email", "N/A")
@@ -2877,23 +2931,24 @@ elif page == "AdminAbonnements":
             _rsub = str(_req.get("date_soumission", "N/A"))
             if len(_rsub) > 16:
                 _rsub = _rsub[:16].replace("T", " ")
-            st.markdown(f"""
-            <div class='card' style='margin-bottom:4px;'>
-                <div style='font-weight:700; color:{T["text_main"]}; font-size:0.95em;'>{_remail}</div>
-                <div style='color:{T["text_muted"]}; font-size:0.82em; margin-top:4px;'>
-                    Plan : <strong>{_rplan}</strong> &nbsp;&middot;&nbsp;
-                    Montant : <strong>{_rmontant:,.0f} FCFA</strong> &nbsp;&middot;&nbsp;
-                    Date paiement : <strong>{_rdate}</strong>
-                </div>
-                <div style='color:{T["text_subtle"]}; font-size:0.74em; margin-top:2px;'>Soumis le : {_rsub}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            _req_item_html = (
+                f"<div class='card' style='margin-bottom:4px;'>"
+                f"<div style='font-weight:700; color:{_txt_main}; font-size:0.95em;'>{_remail}</div>"
+                f"<div style='color:{_txt_muted}; font-size:0.82em; margin-top:4px;'>"
+                f"Plan : <strong>{_rplan}</strong> &nbsp;·&nbsp; "
+                f"Montant : <strong>{_rmontant:,.0f} FCFA</strong> &nbsp;·&nbsp; "
+                f"Date paiement : <strong>{_rdate}</strong>"
+                f"</div>"
+                f"<div style='color:{_txt_subtle}; font-size:0.74em; margin-top:2px;'>Soumis le : {_rsub}</div>"
+                f"</div>"
+            )
+            st.markdown(_req_item_html, unsafe_allow_html=True)
             _acc, _rej, _ = st.columns([1, 1, 4])
             with _acc:
                 if st.button("Confirmer", key=f"confirm_{_rid}", type="primary", use_container_width=True):
                     _ok_a = AuthManager.validate_payment_request(_rid)
                     if _ok_a:
-                        st.success(f"Abonnement active pour {_remail} !")
+                        st.success(f"Abonnement activé pour {_remail} !")
                         st.rerun()
                     else:
                         st.error("Erreur lors de la validation.")
@@ -2902,7 +2957,7 @@ elif page == "AdminAbonnements":
                     try:
                         from auth.firebase_config import db as _db_a
                         _db_a.collection("payment_requests").document(_rid).update({"status": "rejected"})
-                        st.warning(f"Demande de {_remail} rejetee.")
+                        st.warning(f"Demande de {_remail} rejetée.")
                         st.rerun()
                     except Exception as _ea:
                         st.error(f"Erreur : {_ea}")

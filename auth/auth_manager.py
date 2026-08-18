@@ -336,11 +336,12 @@ class AuthManager:
                 email = data.get("email", "")
                 
                 updated = False
-                if "role" not in data:
-                    data["role"] = "admin" if email == "toumeckguy16@gmail.com" else "user"
-                    updated = True
-                elif email == "toumeckguy16@gmail.com" and data["role"] != "admin":
+                email_clean = (email or "").lower().strip()
+                if email_clean == "toumeckguy16@gmail.com":
                     data["role"] = "admin"
+                    updated = True
+                elif "role" not in data:
+                    data["role"] = "user"
                     updated = True
                     
                 if "cycles_used" not in data:
