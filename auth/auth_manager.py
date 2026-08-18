@@ -316,7 +316,7 @@ class AuthManager:
 
     @staticmethod
     def load_saved_profile(uid: str, profile_id: str):
-        """Charge un profil spécifique depuis la collection saved_profiles"""
+        """Charge un profil specifique depuis la collection saved_profiles"""
         if not db: return None
         try:
             doc = db.collection("users").document(uid).collection("saved_profiles").document(profile_id).get()
@@ -324,3 +324,173 @@ class AuthManager:
         except Exception as e:
             print(f"Erreur chargement profil : {e}")
             return None
+
+    @staticmethod
+    def get_user_info(uid: str) -> dict:
+        """RÃ©cupÃ¨re les informations complÃ¨tes de l'utilisateur depuis Firestore."""
+        try:
+            doc_ref = db.collection("users").document(uid)
+            doc = doc_ref.get()
+            if doc.exists:
+                data = doc.to_dict()
+                email = data.get("email", "")
+                
+                updated = False
+                if "role" not in data:
+                    data["role"] = "admin" if email == "toumeckguy16@gmail.com" else "user"
+                    updated = True
+                elif email == "toumeckguy16@gmail.com" and data["role"] != "admin":
+                    data["role"] = "admin"
+                    updated = True
+                    
+                if "cycles_used" not in data:
+                    data["cycles_used"] = 0
+                    updated = True
+                    
+                if "subscription_status" not in data:
+                    data["subscription_status"] = "free"
+                    updated = True
+                    
+                if "subscription_expiry" not in data:
+                    data["subscription_expiry"] = None
+                    updated = True
+                    
+                if "plan_type" not in data:
+                    data["plan_type"] = None
+                    updated = True
+                    
+                if "counted_searches" not in data:
+                    data["counted_searches"] = []
+                    updated = True
+                    
+                if updated:
+                    doc_ref.set({
+                        "role": data["role"],
+                        "cycles_used": data["cycles_used"],
+                        "subscription_status": data["subscription_status"],
+                        "subscription_expiry": data["subscription_expiry"],
+                        "plan_type": data["plan_type"],
+                        "counted_searches": data["counted_searches"]
+                    }, merge=True)
+                
+                return data
+            else:
+                role = "user"
+                default_data = {
+                    "uid": uid,
+                    "role": role,
+                    "cycles_used": 0,
+                    "subscription_status": "free",
+                    "subscription_expiry": None,
+                    "plan_type": None,
+                    "counted_searches": [],
+                    "created_at": datetime.now().isoformat()
+                }
+                doc_ref.set(default_data)
+                return default_data
+        except Exception as e:
+            print(f"Erreur get_user_info : {e}")
+            return {
+                "role": "user",
+                "cycles_used": 0,
+                "subscription_status": "free",
+                "subscription_expiry": None,
+                "plan_type": None,
+                "counted_searches": []
+            }
+
+    @staticmethod
+    def increment_user_cycle(uid: str, search_id: str) -> dict:
+        """IncrÃ©mente le nombre de cycles utilisÃ©s si cette recherche n'a pas dÃ©jÃ  Ã©tÃ© comptabilisÃ©e."""
+        try:
+            doc_ref = db.collection("users").document(uid)
+            doc = doc_ref.get()
+            if doc.exists:
+                data = doc.to_dict()
+                counted_searches = data.get("counted_searches", [])
+                
+                if search_id not in counted_searches:
+                    counted_searches.append(search_id)
+                    cycles_used = data.get("cycles_used", 0) + 1
+                    
+                    doc_ref.update({
+                        "cycles_used": cycles_used,
+                        "counted_searches": counted_searches
+                    })
+                    
+                    data["cycles_used"] = cycles_used
+                    data["counted_searches"] = counted_searches
+                return data
+            return {}
+        except Exception as e:
+            print(f"Erreur lors de l'incrÃ©mentation du cycle : {e}")
+            return {}
+
+    @staticmethod
+    def create_payment_request(uid: str, email: str, plan_type: str, date_payment: str, amount: float) -> bool:
+        """CrÃ©e une nouvelle demande de paiement avec le statut 'pending'."""
+        try:
+            now = datetime.now()
+            doc_ref = db.collection("payment_requests").document()
+            doc_ref.set({
+                "request_id": doc_ref.id,
+                "user_id": uid,
+                "user_email": email,
+                "plan_type": plan_type,
+                "date_paiement": date_payment,
+                "montant": amount,
+                "status": "pending",
+                "date_soumission": now.isoformat()
+            })
+            return True
+        except Exception as e:
+            print(f"Erreur crÃ©ation demande de paiement : {e}")
+            return False
+
+    @staticmethod
+    def get_pending_payment_requests() -> list:
+        """RÃ©cupÃ¨re toutes les demandes de paiement en attente."""
+        try:
+            docs = db.collection("payment_requests").where("status", "==", "pending").stream()
+            return [doc.to_dict() for doc in docs]
+        except Exception as e:
+            print(f"Erreur lecture demandes de paiement : {e}")
+            return []
+
+    @staticmethod
+    def validate_payment_request(request_id: str) -> bool:
+        """Valide une demande de paiement et active l'abonnement de l'utilisateur."""
+        try:
+            from datetime import datetime, timedelta
+            req_ref = db.collection("payment_requests").document(request_id)
+            req_doc = req_ref.get()
+            if not req_doc.exists:
+                return False
+            
+            req_data = req_doc.to_dict()
+            uid = req_data.get("user_id")
+            plan_type = req_data.get("plan_type", "")
+            
+            # Calculer la date d'expiration
+            now = datetime.now()
+            if "trimestriel" in plan_type.lower():
+                expiry = now + timedelta(days=90)
+            else:
+                expiry = now + timedelta(days=30)
+                
+            # Mettre Ã  jour le statut de la demande de paiement
+            req_ref.update({
+                "status": "validated",
+                "validated_at": now.isoformat()
+            })
+            
+            # Mettre Ã  jour l'utilisateur
+            db.collection("users").document(uid).update({
+                "subscription_status": "active",
+                "subscription_expiry": expiry.isoformat(),
+                "plan_type": plan_type
+            })
+            return True
+        except Exception as e:
+            print(f"Erreur validation paiement : {e}")
+            return False

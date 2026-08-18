@@ -71,6 +71,14 @@ def init_session():
         "profile_checked_empty": False,
         "profile_load_attempts": 0,
         "is_new_user": False,
+        # ── Freemium ──
+        "user_role": "user",
+        "cycles_used": 0,
+        "subscription_status": "free",
+        "subscription_expiry": None,
+        "plan_type": None,
+        "user_info_loaded": False,
+        "current_search_id": None,
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -207,6 +215,23 @@ def init_session():
                 st.session_state.chat_loaded = True
             except Exception:
                 pass  # Conserver l'historique en mémoire si Firebase indisponible
+
+        # ── Chargement des informations freemium (role, cycles, abonnement) ──
+        if not st.session_state.get("user_info_loaded"):
+            try:
+                user_info = AuthManager.get_user_info(uid)
+                st.session_state.user_role = user_info.get("role", "user")
+                st.session_state.cycles_used = user_info.get("cycles_used", 0)
+                st.session_state.subscription_status = user_info.get("subscription_status", "free")
+                st.session_state.subscription_expiry = user_info.get("subscription_expiry", None)
+                st.session_state.plan_type = user_info.get("plan_type", None)
+                st.session_state.user_info_loaded = True
+            except Exception:
+                st.session_state.user_role = "user"
+                st.session_state.cycles_used = 0
+                st.session_state.subscription_status = "free"
+                st.session_state.subscription_expiry = None
+                st.session_state.plan_type = None
 
         # ── Détermination de la page par défaut après authentification ──
         if st.session_state.get("current_page") is None:
@@ -1013,6 +1038,32 @@ if st.session_state.get("network_error_count", 0) > 0:
 # ============================================================
 # FONCTION PIPELINE DE RECHERCHE
 # ============================================================
+def check_freemium_access() -> bool:
+    """Vérifie si l'utilisateur est autorisé à utiliser les agents."""
+    role = st.session_state.get("user_role", "user")
+    if role == "admin":
+        return True
+    cycles_used = st.session_state.get("cycles_used", 0)
+    sub_status = st.session_state.get("subscription_status", "free")
+    sub_expiry = st.session_state.get("subscription_expiry", None)
+    if sub_status == "active" and sub_expiry:
+        try:
+            from datetime import datetime as _dt_chk
+            if _dt_chk.now() < _dt_chk.fromisoformat(sub_expiry):
+                return True
+            else:
+                st.session_state.subscription_status = "expired"
+        except Exception:
+            pass
+    if cycles_used < 2:
+        return True
+    # Blocage : redirection vers la page d'abonnement
+    st.session_state.previous_page = st.session_state.get("current_page")
+    st.session_state.current_page = "Abonnement"
+    st.rerun()
+    return False
+
+
 def _run_search_pipeline(user_profile: str):
     """Exécute le pipeline de recherche d'emploi."""
     with st.spinner("Les agents travaillent pour vous..."):
@@ -1091,6 +1142,9 @@ with st.sidebar:
     nav_button("⌁", "Analyse", "Analyse")
     nav_button("◌", "Préparer l'entretien", "Préparation à l'entretien")
     nav_button("⚙", "Paramètres", "Paramètres")
+    nav_button("◈", "Abonnement", "Abonnement")
+    if st.session_state.get("user_role") == "admin":
+        nav_button("⊛", "Validation Abonnements", "AdminAbonnements")
 
     # Espace réduit — profil remonté
     st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
@@ -1123,7 +1177,7 @@ with st.sidebar:
                      title='Double-cliquez pour changer de photo'/>
                 <div class='sidebar-profile-info' style='overflow: hidden; white-space: nowrap; text-overflow: ellipsis; line-height: 1.1;'>
                     <div style='font-size: 0.85em; font-weight: 700; color: {T["text_main"]};'>{p.get("full_name", "Candidat").split()[0]}...</div>
-                    <div style='font-size: 0.7em; color: {T["text_muted"]};'>Free</div>
+                    <div style='font-size: 0.7em; color: {T["text_muted"]};'>{'✓ ' + (st.session_state.get('plan_type') or 'Pro').split()[0] if st.session_state.get('subscription_status') == 'active' else ('Admin' if st.session_state.get('user_role') == 'admin' else ('Expiré' if st.session_state.get('subscription_status') == 'expired' else f'Free ({max(0, 2 - st.session_state.get("cycles_used", 0))} restant)'))}</div>
                 </div>
             </div>
             
@@ -1514,7 +1568,10 @@ elif page == "Profil":
         col_act1, col_act2 = st.columns([1, 1])
         with col_act1:
             if st.button("Lancer la recherche d emploi", type="primary", use_container_width=True):
-                _run_search_pipeline(st.session_state.user_profile_text)
+                if check_freemium_access():
+                    import uuid
+                    st.session_state.current_search_id = str(uuid.uuid4())
+                    _run_search_pipeline(st.session_state.user_profile_text)
         with col_act2:
             if st.session_state.pipeline_result:
                 if st.button("Voir les offres", use_container_width=True):
@@ -1551,6 +1608,8 @@ elif page == "Profil":
                         """, unsafe_allow_html=True)
                     with col_b:
                         if st.button("Analyser", type="primary", use_container_width=True):
+                            if not check_freemium_access():
+                                st.stop()
                             with st.spinner("Analyse du CV en cours..."):
                                 file_bytes = uploaded_file.read()
                                 if st.session_state.use_mock:
@@ -1601,6 +1660,8 @@ elif page == "Profil":
                 )
                 if st.button("Utiliser ce profil", type="primary",
                              disabled=not (user_text or "").strip()):
+                    if not check_freemium_access():
+                        st.stop()
                     with st.spinner("Analyse du profil en cours..."):
                         if st.session_state.use_mock:
                             import time
@@ -1769,8 +1830,16 @@ elif page == "Offres d'emploi":
                         </div>
                         """, unsafe_allow_html=True)
                         if st.button("Voir l'analyse détaillée", key=f"analysis_{i}", use_container_width=True):
-                            st.session_state.selected_job = job
-                            show_job_analysis(job)
+                            if check_freemium_access():
+                                if st.session_state.get("logged_in") and st.session_state.get("user"):
+                                    _uid_c = st.session_state.user.get("uid")
+                                    _sid = st.session_state.get("current_search_id")
+                                    if _sid:
+                                        _upd = AuthManager.increment_user_cycle(_uid_c, _sid)
+                                        if _upd:
+                                            st.session_state.cycles_used = _upd.get("cycles_used", st.session_state.cycles_used)
+                                st.session_state.selected_job = job
+                                show_job_analysis(job)
 
                         if st.button("Se préparer", key=f"sel_{i}", use_container_width=True):
                             st.session_state.selected_job = job
@@ -1941,6 +2010,15 @@ elif page == "Préparation à l'entretien":
 
                 with col_btn1:
                     if st.button("Générer le quiz QCM", type="primary", use_container_width=True):
+                        if not check_freemium_access():
+                            st.stop()
+                        if st.session_state.get("logged_in") and st.session_state.get("user"):
+                            _uid_c = st.session_state.user.get("uid")
+                            _sid = st.session_state.get("current_search_id")
+                            if _sid:
+                                _upd = AuthManager.increment_user_cycle(_uid_c, _sid)
+                                if _upd:
+                                    st.session_state.cycles_used = _upd.get("cycles_used", st.session_state.cycles_used)
                         with st.spinner("CoachAgent génère votre quiz..."):
                             if st.session_state.use_mock:
                                 st.session_state.quiz_questions = \
@@ -1953,8 +2031,9 @@ elif page == "Préparation à l'entretien":
                             st.rerun()
                 with col_btn2:
                     if st.button("Interagir avec le coach", use_container_width=True):
-                        st.session_state.prep_view = "coach"
-                        st.rerun()
+                        if check_freemium_access():
+                            st.session_state.prep_view = "coach"
+                            st.rerun()
 
             else:
                 questions = st.session_state.quiz_questions
@@ -2191,6 +2270,15 @@ elif page == "Préparation à l'entretien":
                 col_new, _ = st.columns([1, 1])
                 with col_new:
                     if st.button("Commencer un nouvel entretien virtuel", use_container_width=True):
+                        if not check_freemium_access():
+                            st.stop()
+                        if st.session_state.get("logged_in") and st.session_state.get("user"):
+                            _uid_c = st.session_state.user.get("uid")
+                            _sid = st.session_state.get("current_search_id")
+                            if _sid:
+                                _upd = AuthManager.increment_user_cycle(_uid_c, _sid)
+                                if _upd:
+                                    st.session_state.cycles_used = _upd.get("cycles_used", st.session_state.cycles_used)
                         with st.spinner("Coach démarre l'entretien..."):
                             if st.session_state.use_mock:
                                 welcome = f"Bonjour ! Bienvenue à votre entretien pour le poste de {job['title']}. Parlez-moi un peu de vous."
@@ -2575,3 +2663,246 @@ elif page == "Paramètres":
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown("<div style='font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; opacity: 0.8;'>Configuration</div>", unsafe_allow_html=True)
     st.session_state.use_mock = st.toggle("Mode démo (sans API)", value=st.session_state.use_mock)
+
+
+
+# ============================================================
+# PAGE ABONNEMENT
+# ============================================================
+elif page == "Abonnement":
+    col_b, _ = st.columns([1, 15])
+    with col_b:
+        st.markdown("<div class='btn-back'>", unsafe_allow_html=True)
+        if st.button("←", key="back_abo_top"):
+            st.session_state.current_page = st.session_state.get("previous_page") or "Dashboard"
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<h1>Abonnement</h1>", unsafe_allow_html=True)
+
+    _sub_status_a = st.session_state.get("subscription_status", "free")
+    _sub_expiry_a  = st.session_state.get("subscription_expiry", None)
+    _plan_type_a   = st.session_state.get("plan_type", None)
+    _cycles_a      = st.session_state.get("cycles_used", 0)
+    _cycles_left_a = max(0, 2 - _cycles_a)
+
+    if _sub_status_a == "active" and _sub_expiry_a:
+        try:
+            from datetime import datetime as _dta
+            _expiry_str_a = _dta.fromisoformat(_sub_expiry_a).strftime("%d/%m/%Y")
+        except Exception:
+            _expiry_str_a = str(_sub_expiry_a)
+        st.markdown(f"""
+        <div class='card-accent' style='margin-bottom:24px;'>
+            <div style='color:{T["text_subtle"]}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Votre abonnement</div>
+            <div style='display:flex; align-items:center; gap:12px; flex-wrap:wrap;'>
+                <div style='background:{T["success"]}22; color:{T["success"]}; border:1px solid {T["success"]}44; padding:6px 16px; border-radius:20px; font-weight:700; font-size:0.9em;'>✓ Actif</div>
+                <div style='color:{T["text_main"]}; font-size:1em; font-weight:700;'>{_plan_type_a or "Pro"}</div>
+            </div>
+            <div style='color:{T["text_muted"]}; font-size:0.85em; margin-top:8px;'>Valide jusqu'au <strong>{_expiry_str_a}</strong></div>
+        </div>
+        """, unsafe_allow_html=True)
+    elif _sub_status_a == "expired":
+        st.markdown(f"""
+        <div class='card-accent' style='margin-bottom:24px; border-top-color:{T["error"]};'>
+            <div style='color:{T["text_subtle"]}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Votre abonnement</div>
+            <div style='background:{T["error"]}22; color:{T["error"]}; border:1px solid {T["error"]}44; padding:6px 16px; border-radius:20px; font-weight:700; font-size:0.9em; display:inline-block;'>⚠ Expiré</div>
+            <div style='color:{T["text_muted"]}; font-size:0.85em; margin-top:8px;'>Votre abonnement a expiré. Renouvelez pour un accès illimité.</div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        _color_cycles_a = T["success"] if _cycles_left_a > 0 else T["error"]
+        st.markdown(f"""
+        <div class='card-accent' style='margin-bottom:24px;'>
+            <div style='color:{T["text_subtle"]}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Votre abonnement</div>
+            <div style='display:flex; align-items:center; gap:12px;'>
+                <div style='background:{T["border"]}; color:{T["text_main"]}; border:1px solid {T["border"]}; padding:6px 16px; border-radius:20px; font-weight:700; font-size:0.9em;'>Gratuit</div>
+                <div style='color:{_color_cycles_a}; font-size:0.9em; font-weight:700;'>{_cycles_left_a} utilisation(s) gratuite(s) restante(s)</div>
+            </div>
+            <div style='color:{T["text_muted"]}; font-size:0.82em; margin-top:8px;'>Chaque cycle complet (recherche → analyse → coaching) consomme 1 utilisation.</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Etat du formulaire paiement
+    for _k, _v in [("abo_selected_plan", None), ("abo_show_form", False), ("abo_payment_sent", False)]:
+        if _k not in st.session_state:
+            st.session_state[_k] = _v
+
+    _plans_a = [
+        {"id": "pro_mensuel", "nom": "Professionnel", "sous_titre": "Pour les chercheurs d'emploi serieux",
+         "prix": "4 900", "periode": "FCFA / mois", "montant": 4900.0, "popular": True,
+         "features": ["Analyses de CV illimitees", "+200 offres / session", "Score hybride avance", "Coaching illimite (QCM + score)", "Historique complet des offres"]},
+        {"id": "pro_trimestriel", "nom": "Pro Trimestriel", "sous_titre": "Economisez sur 3 mois",
+         "prix": "8 500", "periode": "FCFA / trimestre", "montant": 8500.0, "popular": False,
+         "features": ["Tout du plan Pro", "~2 833 FCFA / mois", "3 mois d'acces illimite", "Coaching illimite", "Historique complet"]},
+        {"id": "premium_mensuel", "nom": "Premium", "sous_titre": "La solution complete",
+         "prix": "12 500", "periode": "FCFA / mois", "montant": 12500.0, "popular": False,
+         "features": ["Tout du plan Pro", "Multi-profils (10 CVs)", "API access & integrations", "Dashboard analytique", "Support prioritaire 24h/7j"]},
+        {"id": "premium_trimestriel", "nom": "Premium Trimestriel", "sous_titre": "Economisez sur 3 mois",
+         "prix": "35 000", "periode": "FCFA / trimestre", "montant": 35000.0, "popular": False,
+         "features": ["Tout du plan Premium", "~11 667 FCFA / mois", "3 mois d'acces illimite", "Support 24h/7j", "Onboarding personnalise"]},
+    ]
+
+    if not st.session_state.abo_show_form and not st.session_state.abo_payment_sent:
+        st.markdown(f"""
+        <div style='font-family:Roboto,sans-serif; font-size:1.05em; font-weight:700; color:{T["text_main"]}; margin:20px 0 6px;'>Choisissez votre offre</div>
+        <div style='color:{T["text_muted"]}; font-size:0.82em; margin-bottom:16px;'>Paiement via Mobile Money (Orange Money / MTN MoMo Cameroun)</div>
+        """, unsafe_allow_html=True)
+        _c1, _c2 = st.columns(2)
+        for _ip, _pl in enumerate(_plans_a):
+            _c = _c1 if _ip % 2 == 0 else _c2
+            with _c:
+                _popular_html = f"<div style='background:{T['accent']}; color:white; font-size:0.7em; font-weight:700; padding:3px 10px; border-radius:20px; display:inline-block; margin-bottom:10px;'>Populaire</div>" if _pl["popular"] else ""
+                _feats_html = "".join([f"<div style='font-size:0.82em; color:{T['text_muted']}; padding:2px 0;'>✓ {_f}</div>" for _f in _pl["features"]])
+                st.markdown(f"""
+                <div class='card-accent' style='min-height:240px;'>
+                    {_popular_html}
+                    <div style='font-family:Roboto,sans-serif; font-size:0.95em; font-weight:800; color:{T["text_main"]}; margin-bottom:2px;'>{_pl["nom"]}</div>
+                    <div style='color:{T["text_muted"]}; font-size:0.78em; margin-bottom:10px;'>{_pl["sous_titre"]}</div>
+                    <div style='font-size:1.5em; font-weight:900; color:{T["accent"]}; font-family:Roboto,sans-serif;'>{_pl["prix"]} <span style='font-size:0.4em; color:{T["text_muted"]}; font-weight:400;'>{_pl["periode"]}</span></div>
+                    <div style='margin-top:10px;'>{_feats_html}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                _bt = "primary" if _pl["popular"] else "secondary"
+                if st.button(f"Choisir {_pl['nom']}", key=f"plan_{_pl['id']}", use_container_width=True, type=_bt):
+                    st.session_state.abo_selected_plan = _pl
+                    st.session_state.abo_show_form = True
+                    st.rerun()
+
+    if st.session_state.abo_show_form and st.session_state.abo_selected_plan and not st.session_state.abo_payment_sent:
+        _pl = st.session_state.abo_selected_plan
+        st.markdown(f"""
+        <div class='card-accent' style='margin-bottom:8px;'>
+            <div style='color:{T["text_subtle"]}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Plan choisi</div>
+            <div style='font-family:Roboto,sans-serif; font-size:1.05em; font-weight:800; color:{T["text_main"]};'>{_pl["nom"]} — {_pl["prix"]} {_pl["periode"]}</div>
+        </div>
+        <div class='card' style='margin-bottom:16px;'>
+            <div style='font-weight:700; font-size:0.95em; color:{T["text_main"]}; margin-bottom:12px;'>Deposez le montant sur l un de ces numeros Mobile Money :</div>
+            <div style='display:flex; gap:20px; flex-wrap:wrap;'>
+                <div style='background:{T["bg_main"]}; border:2px solid {T["accent"]}; border-radius:12px; padding:14px 22px; text-align:center;'>
+                    <div style='font-size:0.72em; color:{T["text_muted"]}; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;'>Orange Money</div>
+                    <div style='font-size:1.4em; font-weight:900; color:{T["accent"]}; font-family:Roboto,sans-serif; letter-spacing:2px;'>653 301 970</div>
+                </div>
+                <div style='background:{T["bg_main"]}; border:2px solid {T["accent"]}; border-radius:12px; padding:14px 22px; text-align:center;'>
+                    <div style='font-size:0.72em; color:{T["text_muted"]}; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;'>MTN Mobile Money</div>
+                    <div style='font-size:1.4em; font-weight:900; color:{T["accent"]}; font-family:Roboto,sans-serif; letter-spacing:2px;'>690 380 150</div>
+                </div>
+            </div>
+            <div style='color:{T["text_muted"]}; font-size:0.82em; margin-top:10px;'>Conservez la confirmation de votre transaction avant de remplir le formulaire.</div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown(f"<div style='font-weight:700; color:{T['text_main']}; margin-bottom:10px;'>Confirmer votre transaction</div>", unsafe_allow_html=True)
+        with st.form("form_payment_confirm"):
+            st.text_input("Plan souscrit", value=f"{_pl['nom']} - {_pl['prix']} {_pl['periode']}", disabled=True)
+            _date_form = st.date_input("Date de paiement")
+            _montant_form = st.number_input("Montant paye (FCFA)", min_value=0.0, value=_pl["montant"], step=100.0)
+            _cs1, _cs2 = st.columns(2)
+            with _cs1:
+                _sub = st.form_submit_button("Soumettre la confirmation", type="primary", use_container_width=True)
+            with _cs2:
+                _can = st.form_submit_button("Annuler", use_container_width=True)
+        if _sub:
+            if st.session_state.get("logged_in") and st.session_state.get("user"):
+                _uid_f = st.session_state.user.get("uid")
+                _email_f = st.session_state.user.get("email", "")
+                _ok_f = AuthManager.create_payment_request(
+                    uid=_uid_f, email=_email_f, plan_type=_pl["id"],
+                    date_payment=str(_date_form), amount=_montant_form
+                )
+                if _ok_f:
+                    st.session_state.abo_payment_sent = True
+                    st.session_state.abo_show_form = False
+                    st.rerun()
+                else:
+                    st.error("Erreur lors de la soumission. Veuillez reessayer.")
+        if _can:
+            st.session_state.abo_show_form = False
+            st.session_state.abo_selected_plan = None
+            st.rerun()
+
+    if st.session_state.abo_payment_sent:
+        st.markdown(f"""
+        <div class='card-accent' style='text-align:center; padding:40px;'>
+            <div style='font-size:2.5em; margin-bottom:16px;'>Success</div>
+            <div style='font-family:Roboto,sans-serif; font-size:1.2em; font-weight:800; color:{T["text_main"]}; margin-bottom:10px;'>Demande soumise avec succes !</div>
+            <div style='color:{T["text_muted"]}; font-size:0.88em; max-width:440px; margin:0 auto;'>
+                Votre demande a bien ete recue. L equipe JobAgent AI va valider votre paiement
+                sous 2h en heures ouvrables. Vous pourrez ensuite utiliser toutes les fonctionnalites sans restriction.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Retour au tableau de bord", use_container_width=True, type="primary"):
+            st.session_state.abo_payment_sent = False
+            st.session_state.current_page = "Dashboard"
+            st.rerun()
+
+
+# ============================================================
+# PAGE ADMIN - VALIDATION DES ABONNEMENTS
+# ============================================================
+elif page == "AdminAbonnements":
+    if st.session_state.get("user_role") != "admin":
+        st.error("Acces non autorise.")
+        st.stop()
+
+    col_b, _ = st.columns([1, 15])
+    with col_b:
+        if st.button("←", key="back_admin_top"):
+            st.session_state.current_page = "Dashboard"
+            st.rerun()
+
+    st.markdown("<h1>Validation des Abonnements</h1>", unsafe_allow_html=True)
+    st.markdown(f"<div style='color:{T['text_muted']}; margin-bottom:20px; font-size:0.88em;'>Demandes de paiement Mobile Money en attente de validation.</div>", unsafe_allow_html=True)
+
+    if st.button("Actualiser", use_container_width=False):
+        st.rerun()
+
+    _pending_r = AuthManager.get_pending_payment_requests()
+
+    if not _pending_r:
+        st.markdown(f"""
+        <div class='card' style='text-align:center; padding:48px;'>
+            <div style='font-size:2em; margin-bottom:12px;'>OK</div>
+            <div style='color:{T["text_muted"]}; font-size:0.95em;'>Aucune demande en attente.</div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"<div style='font-weight:700; color:{T['text_main']}; margin-bottom:12px;'>{len(_pending_r)} demande(s) en attente</div>", unsafe_allow_html=True)
+        for _req in _pending_r:
+            _rid = _req.get("request_id", "")
+            _remail = _req.get("user_email", "N/A")
+            _rplan = _req.get("plan_type", "N/A")
+            _rdate = _req.get("date_paiement", "N/A")
+            _rmontant = _req.get("montant", 0)
+            _rsub = str(_req.get("date_soumission", "N/A"))
+            if len(_rsub) > 16:
+                _rsub = _rsub[:16].replace("T", " ")
+            st.markdown(f"""
+            <div class='card' style='margin-bottom:4px;'>
+                <div style='font-weight:700; color:{T["text_main"]}; font-size:0.95em;'>{_remail}</div>
+                <div style='color:{T["text_muted"]}; font-size:0.82em; margin-top:4px;'>
+                    Plan : <strong>{_rplan}</strong> &nbsp;&middot;&nbsp;
+                    Montant : <strong>{_rmontant:,.0f} FCFA</strong> &nbsp;&middot;&nbsp;
+                    Date paiement : <strong>{_rdate}</strong>
+                </div>
+                <div style='color:{T["text_subtle"]}; font-size:0.74em; margin-top:2px;'>Soumis le : {_rsub}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            _acc, _rej, _ = st.columns([1, 1, 4])
+            with _acc:
+                if st.button("Confirmer", key=f"confirm_{_rid}", type="primary", use_container_width=True):
+                    _ok_a = AuthManager.validate_payment_request(_rid)
+                    if _ok_a:
+                        st.success(f"Abonnement active pour {_remail} !")
+                        st.rerun()
+                    else:
+                        st.error("Erreur lors de la validation.")
+            with _rej:
+                if st.button("Rejeter", key=f"reject_{_rid}", use_container_width=True):
+                    try:
+                        from auth.firebase_config import db as _db_a
+                        _db_a.collection("payment_requests").document(_rid).update({"status": "rejected"})
+                        st.warning(f"Demande de {_remail} rejetee.")
+                        st.rerun()
+                    except Exception as _ea:
+                        st.error(f"Erreur : {_ea}")
