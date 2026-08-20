@@ -16,27 +16,28 @@ import requests
 # ─────────────────────────────────────────────
 THEMES = {
     "dark": {
-        "bg_main":    "#0F0F0F",
-        "bg_card":    "#1A1A1A",
-        "text_main":  "#E5E5E5",
-        "text_muted": "#888888",
-        "text_subtle":"#555555",
-        "accent":     "#FF6B00",
-        "accent_h":   "#FF8C33",
-        "border":     "#2A2A2A",
-        "success":    "#22C55E",
+        "bg_main":    "#0B1220",
+        "bg_card":    "#121B2E",
+        "text_main":  "#EDEFF3",
+        "text_muted": "#8B93A7",
+        "text_subtle":"#5D6883",
+        "accent":     "#00C896",
+        "accent_h":   "#00966F",
+        "border":     "#22304A",
+        "success":    "#00C896",
         "error":      "#EF4444",
+        "gold":       "#F2B84B",
     },
     "light": {
-        "bg_main":    "#FFFFFF",
-        "bg_card":    "#F5F5F5",
-        "text_main":  "#111111",
-        "text_muted": "#555555",
-        "text_subtle":"#999999",
-        "accent":     "#DC2626",
-        "accent_h":   "#16A34A",
+        "bg_main":    "#FAFAF7",
+        "bg_card":    "#FAFAF7",
+        "text_main":  "#0B1220",
+        "text_muted": "#8B93A7",
+        "text_subtle":"#5D6883",
+        "accent":     "#00C896",
+        "accent_h":   "#00966F",
         "border":     "#E0E0E0",
-        "success":    "#16A34A",
+        "success":    "#00C896",
         "error":      "#DC2626",
     }
 }
@@ -131,7 +132,7 @@ def render_login_page():
     # ── CSS ──────────────────────────────────
     st.markdown(f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=Roboto:wght@400;500;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
     
     /* Cacher l'entête Streamlit et forcer le fond sombre sur tous les conteneurs */
     header[data-testid="stHeader"] {{
@@ -143,7 +144,7 @@ def render_login_page():
     html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"] {{
         background-color: {T['bg_main']} !important;
         background: {T['bg_main']} !important;
-        font-family: 'DM Sans', sans-serif !important;
+        font-family: 'Manrope', sans-serif !important;
         color: {T['text_main']} !important;
     }}
     
@@ -171,7 +172,7 @@ def render_login_page():
     }}
     
     h1, h2, h3 {{
-        font-family: 'Syne', sans-serif !important;
+        font-family: 'Space Grotesk', sans-serif !important;
         color: {T['text_main']} !important;
     }}
     
@@ -180,7 +181,7 @@ def render_login_page():
         color: {T['text_main']} !important;
         border: 1px solid {T['accent']} !important;
         border-radius: 8px !important;
-        font-family: 'Syne', sans-serif !important;
+        font-family: 'Space Grotesk', sans-serif !important;
         font-weight: 600 !important;
         transition: all 0.2s ease !important;
         height: 48px !important;
@@ -204,7 +205,7 @@ def render_login_page():
         border: 1px solid {T['border']} !important;
         border-radius: 8px !important;
         color: {T['text_main']} !important;
-        font-family: 'DM Sans', sans-serif !important;
+        font-family: 'Manrope', sans-serif !important;
         caret-color: {T['text_main']} !important;
     }}
     .stTextInput input:focus {{
@@ -213,7 +214,7 @@ def render_login_page():
     }}
     
     [data-testid="stTabs"] button {{
-        font-family: 'Syne', sans-serif !important;
+        font-family: 'Space Grotesk', sans-serif !important;
         font-weight: 600 !important;
         background: transparent !important;
     }}
@@ -237,9 +238,9 @@ def render_login_page():
         # Logo / Titre
         st.markdown(f"""
         <div style='text-align:center; padding:0; margin-bottom:5px;'>
-            <div style='font-family:Roboto,sans-serif; font-size:2.4em;
-                        font-weight:800; color:{T["text_main"]} !important;
-                        letter-spacing:-1px;'>JobAgent AI</div>
+            <div style='font-family:"Space Grotesk",sans-serif; font-size:2.4em;
+                        font-weight:700; color:{T["text_main"]} !important;
+                        letter-spacing:-1px;'>Fanboulot</div>
         </div>
         """, unsafe_allow_html=True)
         # Carte formulaire (sans fond ni bordure pour correspondre à l'image)
@@ -301,7 +302,7 @@ def render_login_page():
                         st.success("Email de reinitialisation envoye ! Verifiez votre boite mail.")
                     else:
                         st.error(result["error"])
-            # Séparateur Google
+            # Separateur Google
             st.markdown(f"""
             <div style='display:flex; align-items:center; margin-top:-15px; margin-bottom:5px;'>
                 <hr style='flex:1; border-color:{T["border"]};'>
@@ -359,7 +360,7 @@ def render_login_page():
                      st.rerun()
                     else:
                         st.error(result["error"])
-            # Séparateur Google
+            # Separateur Google
             st.markdown(f"""
             <div style='display:flex; align-items:center; margin-top:-15px; margin-bottom:5px;'>
                 <hr style='flex:1; border-color:{T["border"]};'>
@@ -374,7 +375,7 @@ def render_login_page():
         st.markdown(f"""
         <div style='text-align:center; color:{T["text_subtle"]} !important;
                     font-size:0.78em; margin-top:20px;'>
-           By Mainto Studio &copy; 2026
+           By Stel_IT &copy; 2026
         </div>
         """, unsafe_allow_html=True)
 # ─────────────────────────────────────────────
@@ -414,7 +415,7 @@ def _render_google_button():
         text-decoration: none;
         border-radius: 999px;
         height: 48px;
-        font-family: 'DM Sans', sans-serif;
+        font-family: 'Manrope', sans-serif;
         font-weight: 600;
         font-size: 16px;
         transition: background 0.2s;
