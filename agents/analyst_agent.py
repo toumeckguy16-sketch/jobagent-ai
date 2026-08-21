@@ -1,4 +1,4 @@
-﻿"""
+"""
 Agent Analyste (F4)
 Calcule le score de compatibilité entre le profil utilisateur et les offres d'emploi
 Utilise les embeddings vectoriels + LLM pour un scoring intelligent
@@ -6,10 +6,12 @@ Utilise les embeddings vectoriels + LLM pour un scoring intelligent
 import os
 from typing import List, Dict
 from langchain_openai import OpenAIEmbeddings
-from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
 import numpy as np
+
+from utils.llm_response import make_chat_groq, invoke_json
+
+
 class AnalystAgent:
     """
     Agent qui analyse la compatibilité entre le profil d'un candidat
@@ -19,10 +21,17 @@ class AnalystAgent:
     2. Score LLM (analyse sémantique fine par le LLM)
     3. Score final = moyenne pondérée (40% vectoriel + 60% LLM)
     """
-    SYSTEM_PROMPT = """Tu es un expert RH qui évalue la compatibilité entre un candidat et une 
+
+    SYSTEM_PROMPT = """Tu es un expert RH qui évalue la compatibilité entre un candidat et une \
 offre d'emploi.
-Analyse le profil du candidat par rapport aux exigences de l'offre et retourne un JSON avec :- score: nombre entier de 0 à 100 (0=aucune compatibilité, 100=parfaite correspondance)- matching_skills: liste des compétences du candidat qui correspondent à l'offre- missing_skills: liste des compétences requises que le candidat ne mentionne pas- strengths: liste de 2-3 points forts du candidat pour ce poste- recommendations: liste de 2-3 conseils pour améliorer sa candidature
+Analyse le profil du candidat par rapport aux exigences de l'offre et retourne un JSON avec :
+- score: nombre entier de 0 à 100 (0=aucune compatibilité, 100=parfaite correspondance)
+- matching_skills: liste des compétences du candidat qui correspondent à l'offre
+- missing_skills: liste des compétences requises que le candidat ne mentionne pas
+- strengths: liste de 2-3 points forts du candidat pour ce poste
+- recommendations: liste de 2-3 conseils pour améliorer sa candidature
 Retourne UNIQUEMENT le JSON, rien d'autre."""
+
     ANALYSIS_PROMPT = """Évalue la compatibilité :
 PROFIL CANDIDAT :
 {user_profile}
@@ -32,11 +41,12 @@ Entreprise : {company}
 Description : {description}
 Compétences requises : {required_skills}
 Donne ton évaluation en JSON."""
+
     def __init__(self, model: str = "qwen/qwen3.6-27b"):
-        self.llm = ChatGroq(
-            model=model,
+        # make_chat_groq active reasoning_effort=none pour Qwen → pas de thinking dans la réponse
+        self.llm = make_chat_groq(
             temperature=0,
-            api_key=os.getenv("GROQ_API_KEY")
+            model=model,
         )
         self.embeddings = OpenAIEmbeddings(
             api_key=os.getenv("OPENAI_API_KEY")
@@ -45,7 +55,7 @@ Donne ton évaluation en JSON."""
             ("system", self.SYSTEM_PROMPT),
             ("human",  self.ANALYSIS_PROMPT),
         ])
-        self.chain = self.prompt | self.llm | JsonOutputParser()
+
     # ─────────────────────────────────────────
     #  MÉTHODE PRINCIPALE
     # ─────────────────────────────────────────
@@ -64,6 +74,7 @@ Donne ton évaluation en JSON."""
             profile_embedding = self.embeddings.embed_query(user_profile)
         except Exception:
             profile_embedding = None
+
         results = []
         for job in jobs:
             try:
@@ -74,9 +85,11 @@ Donne ton évaluation en JSON."""
             except Exception as e:
                 print(f"    ⚠ Erreur analyse '{job['title']}': {e}")
                 results.append({**job, "score": 0, "error": str(e)})
+
         # Tri par score décroissant
         results.sort(key=lambda x: x.get("score", 0), reverse=True)
         return results
+
     def _analyze_single_job(
         self,
         user_profile: str,
@@ -88,18 +101,30 @@ Donne ton évaluation en JSON."""
         required_skills_str = ", ".join(
             skills.get("hard_skills", []) + skills.get("tools", [])
         )
-        # Score LLM (analyse sémantique)
-        llm_result = self.chain.invoke({
-            "user_profile":    user_profile,
-            "job_title":       job.get("title", ""),
-            "company":         job.get("company", ""),
-            "description":     job.get("description", ""),
-            "required_skills": required_skills_str,
-        })
+
+        # Score LLM (analyse sémantique) via invoke_json — gère le thinking Qwen
+        try:
+            llm_result = invoke_json(self.llm, self.prompt.format_messages(
+                user_profile=user_profile,
+                job_title=job.get("title", ""),
+                company=job.get("company", ""),
+                description=job.get("description", ""),
+                required_skills=required_skills_str,
+            ))
+        except Exception as e:
+            print(f"    ⚠ Parsing JSON analyst échoué : {e}. Fallback score=50.")
+            llm_result = {}
+
+        # Extraction et validation du score (plage 0-100)
+        raw_score = llm_result.get("score", 50)
+        try:
+            llm_score = max(0, min(100, int(raw_score)))
+        except (TypeError, ValueError):
+            llm_score = 50
+
         # Score vectoriel (cosine similarity) si embedding disponible
-        llm_score = llm_result.get("score", 50)
         vector_score = llm_score  # Fallback: on utilise le score LLM si OpenAI quota failed
-        
+
         if profile_embedding is not None:
             try:
                 job_text = f"{job.get('title', '')} {job.get('description', '')}"
@@ -107,9 +132,10 @@ Donne ton évaluation en JSON."""
                 vector_score = self._cosine_similarity(profile_embedding, job_embedding) * 100
             except Exception:
                 pass
-                
+
         # Score final = 60% LLM + 40% vectoriel
         final_score = int(0.6 * llm_score + 0.4 * vector_score)
+
         return {
             "score":            final_score,
             "llm_score":        llm_score,
@@ -119,6 +145,7 @@ Donne ton évaluation en JSON."""
             "strengths":        llm_result.get("strengths", []),
             "recommendations":  llm_result.get("recommendations", []),
         }
+
     # ─────────────────────────────────────────
     #  UTILITAIRES
     # ─────────────────────────────────────────
@@ -127,6 +154,7 @@ Donne ton évaluation en JSON."""
         """Calcule la similarité cosinus entre deux vecteurs"""
         a, b = np.array(a), np.array(b)
         return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b) + 1e-10))
+
     # ─────────────────────────────────────────
     #  MODE MOCK
     # ─────────────────────────────────────────

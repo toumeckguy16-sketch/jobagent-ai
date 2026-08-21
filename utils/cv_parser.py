@@ -1,6 +1,6 @@
-﻿"""Module CV Parser
+"""Module CV Parser
 Lit un CV uploadé (PDF ou DOCX) et en extrait un profil structuré
-en utilisant le modèle Llama via l'API Groq (gratuit et rapide).
+en utilisant le modèle Qwen via l'API Groq (gratuit et rapide).
 Formats supportés : PDF, DOCX, DOC
 API Groq : https://console.groq.com  (gratuit, sans carte bancaire)
 Modèle   : qwen/qwen3.6-27b"""
@@ -10,16 +10,18 @@ import re
 import json
 from typing import Optional
 from pathlib import Path
+
 # Extraction texte PDF
 import pdfplumber
 # Extraction texte DOCX
 from docx import Document as DocxDocument
-# Llama via Groq (LangChain)
-from langchain_groq import ChatGroq
+# Qwen via Groq (LangChain)
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
 from typing import List
+
+from utils.llm_response import make_chat_groq, extract_final_content, parse_json_from_text
+
 # ─────────────────────────────────────────────
 #  SCHÉMA DU PROFIL EXTRAIT (Pydantic)
 # ─────────────────────────────────────────────
@@ -31,7 +33,7 @@ class ProfessionalExperience(BaseModel):
     technologies: List[str] = Field(description="Technologies ou outils utilisés durant cette expérience")
 
 class CandidateProfile(BaseModel):
-    """Profil structuré extrait du CV par Llama"""
+    """Profil structuré extrait du CV par Qwen"""
     full_name:        str       = Field(description="Nom complet du candidat")
     email:            str       = Field(description="Adresse email (vide si absente)")
     phone:            str       = Field(description="Numéro de téléphone (vide si absent)")
@@ -47,16 +49,18 @@ class CandidateProfile(BaseModel):
     sectors:          List[str] = Field(description="Secteurs ciblés ou expérimentés")
     experiences:      List[ProfessionalExperience] = Field(description="Liste des expériences professionnelles")
     profile_text:     str       = Field(description="Paragraphe résumé utilisé pour la recherche d'offres")
+
+
 # ─────────────────────────────────────────────
-#  CV PARSER — Llama via Groq
+#  CV PARSER — Qwen via Groq
 # ─────────────────────────────────────────────
 class CVParser:
     """
     Lit un CV (PDF ou DOCX) et extrait un profil structuré
-    en utilisant Llama-3.3-70b via l'API Groq.
-    Pourquoi Groq + Llama ?
+    en utilisant Qwen (qwen/qwen3.6-27b) via l'API Groq.
+    Pourquoi Groq + Qwen ?
     - API 100% gratuite (pas de carte bancaire requise)
-    - Llama-3.3-70b : modèle open source très performant
+    - Qwen 3.6-27b : modèle open source très performant
     - Vitesse d'inférence extrêmement rapide (LPU Groq)
     - Idéal pour l'extraction structurée de documents
     Pipeline :
@@ -72,11 +76,15 @@ class CVParser:
         ChatGroq (qwen/qwen3.6-27b, temperature=0)
 │
 ▼
-        JsonOutputParser + validation Pydantic (CandidateProfile)
+        extract_final_content() → supprime le thinking Qwen
+│
+▼
+        parse_json_from_text() → extraction JSON robuste
 │
 ▼
         dict structuré → JobSearchState
     """
+
     SYSTEM_PROMPT = """Tu es un expert RH spécialisé dans l'analyse de CVs.
 Analyse le texte brut du CV fourni et extrais toutes les informations pertinentes.
 Si une information est absente du CV, utilise une chaîne vide "" ou 0 pour les entiers.
@@ -114,29 +122,30 @@ Respecte exactement cette structure :
 Si aucune expérience professionnelle n'est trouvée, retourne "experiences": [].
 IMPORTANT : Extrais TOUTES les expériences professionnelles listées dans le CV. Ne les résume pas trop, garde les détails importants.
 """
+
     EXTRACTION_PROMPT = """Voici le texte brut extrait du CV :--
 {cv_text}--
 Extrais toutes les informations et retourne le JSON du profil candidat."""
+
     def __init__(self, model: str = "qwen/qwen3.6-27b"):
         """
         Args:
-            model: Modèle Llama disponible sur Groq.
-                   Alternatives : "llama-3.1-8b-instant" (plus rapide, moins précis)
+            model: Modèle Qwen disponible sur Groq.
+                   Alternatives : "qwen/qwen3.5-7b" (plus rapide, moins précis)
                                   "mixtral-8x7b-32768"   (bon pour les longs CVs)
         """
-        self.llm = ChatGroq(
-            model=model,
+        # make_chat_groq active reasoning_effort=none pour Qwen
+        # → empêche le thinking de polluer le JSON
+        self.llm = make_chat_groq(
             temperature=0,          # Extraction factuelle → déterministe
-            api_key=os.getenv("GROQ_API_KEY"),
-            max_tokens=2048,
+            max_tokens=4096,        # Augmenté (était 2048) pour les CVs détaillés
+            model=model,
         )
-        self.parser = JsonOutputParser(pydantic_object=CandidateProfile)
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", self.SYSTEM_PROMPT),
             ("human",  self.EXTRACTION_PROMPT),
         ])
-        # Chaîne LangChain : Prompt → Llama (Groq) → Parser JSON
-        self.chain = self.prompt | self.llm | self.parser
+
     # ─────────────────────────────────────────
     #  MÉTHODE PRINCIPALE
     # ─────────────────────────────────────────
@@ -168,17 +177,17 @@ Extrais toutes les informations et retourne le JSON du profil candidat."""
             )
         # 2. Nettoyage du texte
         clean_text = self._clean_text(raw_text)
-        
+
         # Log du texte brut pour débogage
         print(f"DEBUG - Texte brut extrait (longueur {len(clean_text)}) : {clean_text[:1000]}...")
-        
-        # 3. Structuration via Llama (Groq)
+
+        # 3. Structuration via Qwen (Groq)
         # On limite à 4000 caractères pour plus de contexte
-        profile = self.chain.invoke({"cv_text": clean_text[:4000]})
-        
+        profile = self._invoke_and_parse({"cv_text": clean_text[:4000]})
+
         # Log pour débogage
         print(f"DEBUG - Profil extrait : {json.dumps(profile, indent=2)}")
-        
+
         # 4. Ajouter le texte brut pour référence
         profile["raw_cv_text"] = clean_text
         return profile
@@ -189,22 +198,66 @@ Extrais toutes les informations et retourne le JSON du profil candidat."""
         """
         if not raw_text.strip():
             raise ValueError("Le texte fourni est vide.")
-            
+
         clean_text = self._clean_text(raw_text)
-        
+
         print(f"DEBUG - Texte brut extrait (longueur {len(clean_text)}) : {clean_text[:1000]}...")
-        
-        profile = self.chain.invoke({"cv_text": clean_text[:4000]})
-        
+
+        profile = self._invoke_and_parse({"cv_text": clean_text[:4000]})
+
         print(f"DEBUG - Profil extrait : {json.dumps(profile, indent=2)}")
-        
+
         profile["raw_cv_text"] = clean_text
         if not profile.get("full_name"):
             profile["full_name"] = "Candidat"
         if not profile.get("job_title"):
             profile["job_title"] = "Profil Saisi"
-            
+
         return profile
+
+    # ─────────────────────────────────────────
+    #  INVOCATION LLM + PARSING ROBUSTE
+    # ─────────────────────────────────────────
+    def _invoke_and_parse(self, inputs: dict) -> dict:
+        """
+        Appelle le LLM et parse la réponse JSON de façon robuste.
+        Passe systématiquement par extract_final_content() pour
+        supprimer tout raisonnement interne Qwen avant le parsing.
+        """
+        messages = self.prompt.format_messages(**inputs)
+        response = self.llm.invoke(messages)
+
+        # Extraction de la réponse finale uniquement (supprime le thinking Qwen)
+        visible_text = extract_final_content(response)
+
+        # Parsing JSON robuste (gère les blocs ```json, les préfixes, etc.)
+        try:
+            return parse_json_from_text(visible_text)
+        except Exception as e:
+            print(f"[CVParser] Erreur parsing JSON : {e}. Retour profil vide.")
+            return self._empty_profile()
+
+    @staticmethod
+    def _empty_profile() -> dict:
+        """Retourne un profil vide compatible avec la structure attendue."""
+        return {
+            "full_name": "",
+            "email": "",
+            "phone": "",
+            "location": "",
+            "job_title": "",
+            "summary": "",
+            "hard_skills": [],
+            "soft_skills": [],
+            "tools": [],
+            "languages": [],
+            "education_level": "",
+            "experience_years": 0,
+            "sectors": [],
+            "experiences": [],
+            "profile_text": "",
+        }
+
     # ─────────────────────────────────────────
     #  EXTRACTEURS DE TEXTE BRUT
     # ─────────────────────────────────────────
@@ -217,6 +270,7 @@ Extrais toutes les informations et retourne le JSON du profil candidat."""
                 if page_text:
                     text_parts.append(page_text)
         return "\n".join(text_parts)
+
     def _extract_from_docx(self, file_bytes: bytes) -> str:
         """Extrait le texte d'un fichier DOCX (paragraphes + tableaux)"""
         doc        = DocxDocument(io.BytesIO(file_bytes))
@@ -230,6 +284,7 @@ Extrais toutes les informations et retourne le JSON du profil candidat."""
                 if row_text:
                     paragraphs.append(row_text)
         return "\n".join(paragraphs)
+
     def _clean_text(self, text: str) -> str:
         """Nettoie le texte extrait du CV"""
         text = re.sub(r'\x00', '', text)         # Null bytes
@@ -237,7 +292,8 @@ Extrais toutes les informations et retourne le JSON du profil candidat."""
         text = re.sub(r'\n{3,}', '\n\n', text)    # Lignes vides multiples
         text = re.sub(r'[ \t]{2,}', ' ', text)    # Espaces multiples
         return text.strip()
-    #─────────────────────────────────────────
+
+    # ─────────────────────────────────────────
     #  MODE MOCK (sans clé Groq)
     # ─────────────────────────────────────────
     @staticmethod
