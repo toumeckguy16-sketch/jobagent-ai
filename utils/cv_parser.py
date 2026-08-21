@@ -1,9 +1,9 @@
-"""Module CV Parser
+﻿"""Module CV Parser
 Lit un CV uploadé (PDF ou DOCX) et en extrait un profil structuré
 en utilisant le modèle Llama via l'API Groq (gratuit et rapide).
 Formats supportés : PDF, DOCX, DOC
 API Groq : https://console.groq.com  (gratuit, sans carte bancaire)
-Modèle   : llama-3.3-70b-versatile"""
+Modèle   : qwen/qwen3.6-27b"""
 import os
 import io
 import re
@@ -69,7 +69,7 @@ class CVParser:
         Nettoyage du texte
 │
 ▼
-        ChatGroq (llama-3.3-70b-versatile, temperature=0)
+        ChatGroq (qwen/qwen3.6-27b, temperature=0)
 │
 ▼
         JsonOutputParser + validation Pydantic (CandidateProfile)
@@ -117,7 +117,7 @@ IMPORTANT : Extrais TOUTES les expériences professionnelles listées dans le CV
     EXTRACTION_PROMPT = """Voici le texte brut extrait du CV :--
 {cv_text}--
 Extrais toutes les informations et retourne le JSON du profil candidat."""
-    def __init__(self, model: str = "llama-3.3-70b-versatile"):
+    def __init__(self, model: str = "qwen/qwen3.6-27b"):
         """
         Args:
             model: Modèle Llama disponible sur Groq.

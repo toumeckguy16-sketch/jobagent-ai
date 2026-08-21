@@ -1,4 +1,4 @@
-"""
+﻿"""
 Agent Extracteur (F3)
 Extrait automatiquement les compétences requises dans chaque offre d'emploi.
 Utilise ChatGroq (API cloud) pour fonctionner sur Streamlit Cloud.
@@ -33,7 +33,7 @@ class ExtractorAgent:
     Agent qui analyse chaque offre d'emploi et en extrait
     les compétences de façon structurée via ChatGroq.
     """
-    DEFAULT_MODEL = "llama-3.3-70b-versatile"
+    DEFAULT_MODEL = "qwen/qwen3.6-27b"
     
     # NOTE : Les accolades littérales doivent être doublées {{ }} pour éviter 
     # que LangChain ne les interprète comme des variables de prompt.

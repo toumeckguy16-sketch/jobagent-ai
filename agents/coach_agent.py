@@ -1,4 +1,4 @@
-"""
+﻿"""
 Agent Coach (F5) — Version QCM
 Prépare l'utilisateur à l'entretien d'embauche via RAG + LLM
 Génère un quiz QCM (3 propositions) avec correction automatique
@@ -70,7 +70,7 @@ Tu aides un candidat à préparer son entretien pour le poste de {job_title} che
 Contexte de l'offre : {job_context}
 Réponds de façon constructive, encourage le candidat et donne des exemples concrets.
 """
-    def __init__(self, model: str = "llama-3.3-70b-versatile"):
+    def __init__(self, model: str = "qwen/qwen3.6-27b"):
         self.llm = ChatGroq(
             model=model,
             temperature=0.3,

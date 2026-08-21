@@ -1,4 +1,4 @@
-"""
+﻿"""
 config/settings.py
 ==================
 Module de configuration centralisé.
@@ -7,7 +7,7 @@ comme un objet unique importable partout dans le projet.
 Usage dans n'importe quel fichier :
     from config.settings import settings
     print(settings.OPENAI_MODEL)      # gpt-4o-mini
-    print(settings.GROQ_MODEL)        # llama-3.3-70b-versatile
+    print(settings.GROQ_MODEL)        # qwen/qwen3.6-27b
     print(settings.OLLAMA_MODEL)      # mistral
     print(settings.TAVILY_API_KEY)    # tvly-...
 Récapitulatif des LLMs par agent :
@@ -18,7 +18,7 @@ Récapitulatif des LLMs par agent :
 │
 ├──────────────────┼──────────────────────────┼─────────────────┤
 │ CVParser         
-│ llama-3.3-70b-versatile  │ Groq (gratuit)  │
+│ qwen/qwen3.6-27b  │ Groq (gratuit)  │
 │ ExtractorAgent   
 │ AnalystAgent     
 │ CoachAgent       
@@ -55,7 +55,7 @@ class Settings:
     OPENAI_MODEL:   str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     # ── Groq / Llama (CVParser) ──────────────────────────────
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    GROQ_MODEL:   str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    GROQ_MODEL:   str = os.getenv("GROQ_MODEL", "qwen/qwen3.6-27b")
     # ── Ollama (ExtractorAgent — modèle local) ───────────────
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     OLLAMA_MODEL:    str = os.getenv("OLLAMA_MODEL", "mistral")

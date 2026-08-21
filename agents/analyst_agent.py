@@ -1,4 +1,4 @@
-"""
+﻿"""
 Agent Analyste (F4)
 Calcule le score de compatibilité entre le profil utilisateur et les offres d'emploi
 Utilise les embeddings vectoriels + LLM pour un scoring intelligent
@@ -32,7 +32,7 @@ Entreprise : {company}
 Description : {description}
 Compétences requises : {required_skills}
 Donne ton évaluation en JSON."""
-    def __init__(self, model: str = "llama-3.3-70b-versatile"):
+    def __init__(self, model: str = "qwen/qwen3.6-27b"):
         self.llm = ChatGroq(
             model=model,
             temperature=0,
