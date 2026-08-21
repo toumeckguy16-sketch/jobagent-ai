@@ -1,4 +1,4 @@
-﻿"""
+"""
 Interface Utilisateur Streamlit — Fanboulot
 Deux thèmes : Sombre (#0B1220 / #EDEFF3 / #00C896)
               Clair  (#FAFAF7 / #0B1220 / #00C896)
@@ -355,7 +355,7 @@ def show_job_analysis(job):
         <div style='text-align:center; background:{T["bg_main"]};
                     border-radius:10px; padding:20px;
                     border:2px solid {color};'>
-            <div style='font-family:"Space Grotesk",sans-serif; font-size:2.2em;
+            <div style='font-family:'Space Grotesk',sans-serif; font-size:2.2em;
                         font-weight:800; color:{color};'>{score}%</div>
             <div style='color:{T["text_muted"]}; font-size:0.8em;'>Match</div>
         </div>
@@ -373,7 +373,7 @@ def show_job_analysis(job):
             llm_display = "N/A"
         
         st.markdown(f"""
-        <div style='text-align:center; margin-top:8px; font-family:"Space Grotesk",sans-serif; font-size:0.85em; color:{T["text_main"]}; line-height:1.4;'>
+        <div style='text-align:center; margin-top:8px; font-family:'Space Grotesk',sans-serif; font-size:0.85em; color:{T["text_main"]}; line-height:1.4;'>
             Score vectoriel : <strong>{vec_display}</strong><br>
             Score LLM : <strong>{llm_display}</strong>
         </div>
@@ -1132,7 +1132,7 @@ def _run_search_pipeline(user_profile: str):
 with st.sidebar:
     st.markdown(f"""
     <div class='sidebar-logo' style='padding: 0 10px 30px 10px; margin-top: -30px; text-align: center;'>
-        <div style='font-family:"Space Grotesk",sans-serif; font-size:1.4em; font-weight:700;
+        <div style='font-family:'Space Grotesk',sans-serif; font-size:1.4em; font-weight:700;
                     color:{T["text_main"]}; letter-spacing: -0.5px;'>Fanboulot</div></div>
     """, unsafe_allow_html=True)
 
@@ -1390,7 +1390,7 @@ if page == "Dashboard":
         table_html = (
             "<div style='background:" + T["bg_card"] + ";border:1px solid " + T["border"] + ";"
             "border-radius:12px;overflow:hidden;margin-top:10px;'>"
-            "<table style='width:100%;border-collapse:collapse;font-family:"Space Grotesk",sans-serif;font-size:0.85em;'>"
+            "<table style='width:100%;border-collapse:collapse;font-family:'Space Grotesk',sans-serif;font-size:0.85em;'>"
             "<thead><tr style='background:" + T["bg_main"] + ";border-bottom:1px solid " + T["border"] + ";text-align:left;'>"
             "<th style='padding:10px 12px;color:" + T["text_muted"] + ";font-size:0.72em;text-transform:uppercase;letter-spacing:1px;'>Site</th>"
             "<th style='padding:10px 12px;color:" + T["text_muted"] + ";font-size:0.72em;text-transform:uppercase;letter-spacing:1px;'>Rejets</th>"
@@ -1434,7 +1434,7 @@ if page == "Dashboard":
                 with h_col1:
                     st.markdown(f"""
                     <div class='card' style='margin:0; padding:12px 18px; border-left:4px solid {T["accent"]}33;'>
-                        <div style='font-family:"Space Grotesk",sans-serif; font-weight:700; font-size:0.95em;'>{dt_str}</div>
+                        <div style='font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:0.95em;'>{dt_str}</div>
                         <div style='font-size:0.82em; color:{T["text_muted"]}; margin-top:3px;'>
                             Profil : {query_prev[:120]}...
                         </div>
@@ -1555,7 +1555,7 @@ elif page == "Profil":
 
         st.markdown(f"""
 <div class='card-accent' style='min-height: fit-content;'>
-<div style='font-family:"Space Grotesk",sans-serif; font-size:1.4em; font-weight:800; color:{T["text_main"]};'>
+<div style='font-family:'Space Grotesk',sans-serif; font-size:1.4em; font-weight:800; color:{T["text_main"]};'>
 {p.get("full_name","N/A")}
 </div>
 <div style='color:{T["accent"]}; margin-top:4px;'>
@@ -1708,7 +1708,7 @@ elif page == "Profil":
 
             with col_tips:
                 st.markdown(f"""<div class='card'>
-                    <div style='font-family:"Space Grotesk",sans-serif; font-weight:700;
+                    <div style='font-family:'Space Grotesk',sans-serif; font-weight:700;
                                 color:{T["accent"]}; margin-bottom:12px;'>Conseils</div>
                     <div style='color:{T["text_main"]}; font-size:0.85em; line-height:1.9;'>
                         Mentionnez vos competences techniques<br>
@@ -1727,7 +1727,7 @@ elif page == "Offres d'emploi":
         st.markdown(f"""
         <div style='background:{T["bg_card"]}; border:1px dashed {T["border"]};
                     border-radius:14px; padding:48px; text-align:center;'>
-            <div style='color:{T["accent"]}; font-family:"Space Grotesk",sans-serif;
+            <div style='color:{T["accent"]}; font-family:'Space Grotesk',sans-serif;
                         font-size:1.1em; margin-top:10px;'>Aucune recherche lancée</div>
             <div style='color:{T["text_muted"]}; font-size:0.9em; margin-top:8px;'>
                 Renseignez votre profil dans l'onglet Mon Profil et lancez la recherche.
@@ -1837,7 +1837,7 @@ elif page == "Offres d'emploi":
                         <div style='text-align:center; background:{T["bg_main"]};
                                     border-radius:10px; padding:18px;
                                     border:1px solid {T["border"]};'>
-                            <div style='font-family:"Space Grotesk",sans-serif; font-size:1.8em;
+                            <div style='font-family:'Space Grotesk',sans-serif; font-size:1.8em;
                                         font-weight:800; color:{color};'>{score}%</div>
                             <div style='color:{T["text_muted"]}; font-size:0.78em;
                                         margin-top:4px;'>Compatibilité</div>
@@ -1889,14 +1889,14 @@ elif page == "Analyse":
                 <div style='color:{T["text_muted"]}; font-size:0.75em; font-weight:700;
                             letter-spacing:2px; text-transform:uppercase;
                             margin-bottom:6px;'>Meilleure correspondance</div>
-                <div style='font-family:"Space Grotesk",sans-serif; font-size:1.3em;
+                <div style='font-family:'Space Grotesk',sans-serif; font-size:1.3em;
                             font-weight:800; color:{T["text_main"]};'>
                     {best["title"]} — {best["company"]}
                 </div>
                 <div style='color:{T["text_muted"]}; font-size:0.85em; margin-top:5px;'>
                     {best.get("location", "N/A")}
                 </div>
-                <div style='font-family:"Space Grotesk",sans-serif; font-size:2em;
+                <div style='font-family:'Space Grotesk',sans-serif; font-size:2em;
                             font-weight:800; color:{T["accent"]}; margin-top:10px;'>
                     {best.get("score", 0)}%
                     <span style='font-size:0.4em; color:{T["text_muted"]};'>
@@ -1921,7 +1921,7 @@ elif page == "Analyse":
             with col_b:
                 st.markdown(
                     f"<div style='text-align:right; color:{color}; font-weight:700;"
-                    f"font-family:"Space Grotesk",sans-serif; font-size:1.2em;'>{score}%</div>",
+                    f"font-family:'Space Grotesk',sans-serif; font-size:1.2em;'>{score}%</div>",
                     unsafe_allow_html=True
                 )
 
@@ -1984,7 +1984,7 @@ elif page == "Préparation à l'entretien":
             st.markdown(f"""
             <div style='background:{T["bg_card"]}; border:1px dashed {T["border"]};
                         border-radius:14px; padding:48px; text-align:center;'>
-                <div style='color:{T["accent"]}; font-family:"Space Grotesk",sans-serif; font-size:1.1em;'>
+                <div style='color:{T["accent"]}; font-family:'Space Grotesk',sans-serif; font-size:1.1em;'>
                     Aucune offre sélectionnée
                 </div>
                 <div style='color:{T["text_muted"]}; font-size:0.9em; margin-top:8px;'>
@@ -2000,7 +2000,7 @@ elif page == "Préparation à l'entretien":
             <div class='card-accent'>
                 <div style='color:{T["text_muted"]}; font-size:0.75em; font-weight:700;
                             letter-spacing:2px; text-transform:uppercase;'>Offre sélectionnée</div>
-                <div style='font-family:"Space Grotesk",sans-serif; font-size:1.2em;
+                <div style='font-family:'Space Grotesk',sans-serif; font-size:1.2em;
                             font-weight:800; color:{T["text_main"]}; margin-top:6px;'>
                     {job["title"]}
                     <span style='color:{T["text_muted"]}; font-weight:400; font-size:0.8em;'>
@@ -2092,10 +2092,10 @@ elif page == "Préparation à l'entretien":
                         <span style='background:{T["accent"]}22; color:{T["accent"]};
                                      border:1px solid {T["accent"]}44; padding:2px 10px;
                                      border-radius:20px; font-size:0.75em;
-                                     font-family:"Space Grotesk",sans-serif; font-weight:700;'>
+                                     font-family:'Space Grotesk',sans-serif; font-weight:700;'>
                             {label}
                         </span>
-                        <div style='font-family:"Space Grotesk",sans-serif; font-weight:700;
+                        <div style='font-family:'Space Grotesk',sans-serif; font-weight:700;
                                     color:{T["text_main"]}; font-size:1.05em;
                                     margin:12px 0 16px; line-height:1.4;'>
                             Q{qid}. {q.get("question", "")}
@@ -2314,7 +2314,7 @@ elif page == "Préparation à l'entretien":
                                 AuthManager.save_chat_history(uid, st.session_state.chat_history)
                             st.rerun()
 
-                st.markdown(f"<div style='background:{T['bg_card']}; border:1px dashed {T['border']}; border-radius:14px; padding:48px; text-align:center; margin-top:16px;'><div style='font-size:1.8em;'>&#128172;</div><div style='font-family:"Space Grotesk",sans-serif; font-weight:700; color:{T['text_main']}; margin-top:12px;'>Prêt pour votre entretien ?</div><div style='color:{T['text_muted']}; font-size:0.9em; margin-top:8px;'>Cliquez sur <b>Commencer un nouvel entretien virtuel</b> pour démarrer,<br>ou reprenez une conversation depuis l'historique.</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:{T['bg_card']}; border:1px dashed {T['border']}; border-radius:14px; padding:48px; text-align:center; margin-top:16px;'><div style='font-size:1.8em;'>&#128172;</div><div style='font-family:'Space Grotesk',sans-serif; font-weight:700; color:{T['text_main']}; margin-top:12px;'>Prêt pour votre entretien ?</div><div style='color:{T['text_muted']}; font-size:0.9em; margin-top:8px;'>Cliquez sur <b>Commencer un nouvel entretien virtuel</b> pour démarrer,<br>ou reprenez une conversation depuis l'historique.</div></div>", unsafe_allow_html=True)
             
             else:
                 col_back, _ = st.columns([1, 6])
@@ -2783,7 +2783,7 @@ elif page == "Abonnement":
 
     if not st.session_state.abo_show_form and not st.session_state.abo_payment_sent:
         _header_html = (
-            f"<div style='font-family:"Space Grotesk",sans-serif; font-size:1.05em; font-weight:700; color:{_txt_main}; margin:20px 0 6px;'>Choisissez votre offre</div>"
+            f"<div style='font-family:'Space Grotesk',sans-serif; font-size:1.05em; font-weight:700; color:{_txt_main}; margin:20px 0 6px;'>Choisissez votre offre</div>"
             f"<div style='color:{_txt_muted}; font-size:0.82em; margin-bottom:16px;'>Paiement via Mobile Money (Orange Money / MTN MoMo Cameroun)</div>"
         )
         st.markdown(_header_html, unsafe_allow_html=True)
@@ -2800,9 +2800,9 @@ elif page == "Abonnement":
                 _card_markup = (
                     f"<div class='card-accent' style='min-height:240px;'>"
                     f"{_pop_div}"
-                    f"<div style='font-family:"Space Grotesk",sans-serif; font-size:0.95em; font-weight:800; color:{_txt_main}; margin-bottom:2px;'>{_pl_nom}</div>"
+                    f"<div style='font-family:'Space Grotesk',sans-serif; font-size:0.95em; font-weight:800; color:{_txt_main}; margin-bottom:2px;'>{_pl_nom}</div>"
                     f"<div style='color:{_txt_muted}; font-size:0.78em; margin-bottom:10px;'>{_pl_sub}</div>"
-                    f"<div style='font-size:1.5em; font-weight:900; color:{_accent_col}; font-family:"Space Grotesk",sans-serif;'>{_pl_prix} <span style='font-size:0.4em; color:{_txt_muted}; font-weight:400;'>{_pl_per}</span></div>"
+                    f"<div style='font-size:1.5em; font-weight:900; color:{_accent_col}; font-family:'Space Grotesk',sans-serif;'>{_pl_prix} <span style='font-size:0.4em; color:{_txt_muted}; font-weight:400;'>{_pl_per}</span></div>"
                     f"<div style='margin-top:10px;'>{_f_items}</div>"
                     f"</div>"
                 )
@@ -2821,18 +2821,18 @@ elif page == "Abonnement":
         _choice_box = (
             f"<div class='card-accent' style='margin-bottom:8px;'>"
             f"<div style='color:{_txt_subtle}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Plan choisi</div>"
-            f"<div style='font-family:"Space Grotesk",sans-serif; font-size:1.05em; font-weight:800; color:{_txt_main};'>{_pl_nom} — {_pl_prix} {_pl_per}</div>"
+            f"<div style='font-family:'Space Grotesk',sans-serif; font-size:1.05em; font-weight:800; color:{_txt_main};'>{_pl_nom} — {_pl_prix} {_pl_per}</div>"
             f"</div>"
             f"<div class='card' style='margin-bottom:16px;'>"
             f"<div style='font-weight:700; font-size:0.95em; color:{_txt_main}; margin-bottom:12px;'>Déposez le montant sur l'un de ces numéros Mobile Money :</div>"
             f"<div style='display:flex; gap:20px; flex-wrap:wrap;'>"
             f"<div style='background:{_bg_main}; border:2px solid {_accent_col}; border-radius:12px; padding:14px 22px; text-align:center;'>"
             f"<div style='font-size:0.72em; color:{_txt_muted}; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;'>Orange Money</div>"
-            f"<div style='font-size:1.4em; font-weight:900; color:{_accent_col}; font-family:"Space Grotesk",sans-serif; letter-spacing:2px;'>690 380 150</div>"
+            f"<div style='font-size:1.4em; font-weight:900; color:{_accent_col}; font-family:'Space Grotesk',sans-serif; letter-spacing:2px;'>690 380 150</div>"
             f"</div>"
             f"<div style='background:{_bg_main}; border:2px solid {_accent_col}; border-radius:12px; padding:14px 22px; text-align:center;'>"
             f"<div style='font-size:0.72em; color:{_txt_muted}; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;'>MTN Mobile Money</div>"
-            f"<div style='font-size:1.4em; font-weight:900; color:{_accent_col}; font-family:"Space Grotesk",sans-serif; letter-spacing:2px;'>653 301 970</div>"
+            f"<div style='font-size:1.4em; font-weight:900; color:{_accent_col}; font-family:'Space Grotesk',sans-serif; letter-spacing:2px;'>653 301 970</div>"
             f"</div>"
             f"</div>"
             f"<div style='color:{_txt_muted}; font-size:0.82em; margin-top:10px;'>Conservez la confirmation de votre transaction avant de remplir le formulaire.</div>"
@@ -2872,7 +2872,7 @@ elif page == "Abonnement":
         _succ_card = (
             f"<div class='card-accent' style='text-align:center; padding:40px;'>"
             f"<div style='font-size:2.5em; margin-bottom:16px;'>🎉</div>"
-            f"<div style='font-family:"Space Grotesk",sans-serif; font-size:1.2em; font-weight:800; color:{_txt_main}; margin-bottom:10px;'>Demande soumise avec succès !</div>"
+            f"<div style='font-family:'Space Grotesk',sans-serif; font-size:1.2em; font-weight:800; color:{_txt_main}; margin-bottom:10px;'>Demande soumise avec succès !</div>"
             f"<div style='color:{_txt_muted}; font-size:0.88em; max-width:440px; margin:0 auto;'>"
             f"Votre demande a bien été reçue. L'équipe Fanboulot va valider votre paiement "
             f"sous 2h en heures ouvrables. Vous pourrez ensuite utiliser toutes les fonctionnalités sans restriction."
