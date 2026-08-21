@@ -1,4 +1,4 @@
-﻿"""
+"""
 Agent Coach (F5) — Version QCM
 Prépare l'utilisateur à l'entretien d'embauche via RAG + LLM
 Génère un quiz QCM (3 propositions) avec correction automatique
@@ -47,9 +47,9 @@ Retourne UNIQUEMENT un JSON valide avec cette structure exacte :
       "explanation": "Explication détaillée pourquoi B est la bonne réponse, et pourquoi A et C sont incorrectes."
     }}
   ],
-  "total": 15
+  "total": 5
 }}
-Génère exactement 15 questions variées (mélange technique, comportemental et mises en situation).
+Génère exactement 5 questions variées (mélange technique, comportemental et mises en situation).
 Répartis de manière équilibrée les niveaux de difficulté : Facile, Moyen, Difficile.
 IMPORTANT :
 - Tu dois MÉLANGER aléatoirement la position des bonnes réponses pour t'assurer que "correct_answer" est parfois A, parfois B et parfois C.
@@ -63,7 +63,7 @@ Offre d'emploi :
 Titre       : {job_title}
 Entreprise  : {company}
 Compétences : {required_skills}
-Génère le quiz QCM de 15 questions."""
+Génère le quiz QCM de 5 questions."""
     # ── Prompt Chat ───────────────────────────────────────────────
     CHAT_SYSTEM_PROMPT = """Tu es un coach bienveillant et expert en entretiens d'embauche.
 Tu aides un candidat à préparer son entretien pour le poste de {job_title} chez {company}.
@@ -114,13 +114,18 @@ Réponds de façon constructive, encourage le candidat et donne des exemples con
             ("human",  self.QUIZ_PROMPT + candidate_exp_text),
         ])
         chain  = prompt | self.llm | JsonOutputParser()
-        result = chain.invoke({
-            "context":         context,
-            "job_title":       job.get("title", ""),
-            "company":         job.get("company", ""),
-            "required_skills": required_skills,
-        })
-        return result.get("questions", [])
+        
+        try:
+            result = chain.invoke({
+                "context":         context,
+                "job_title":       job.get("title", ""),
+                "company":         job.get("company", ""),
+                "required_skills": required_skills,
+            })
+            return result.get("questions", [])
+        except Exception as e:
+            print(f"Erreur lors de la génération du quiz : {e}")
+            return self.mock_generate_quiz(job)
 
     # ─────────────────────────────────────────
     #  CHAT INTERACTIF
