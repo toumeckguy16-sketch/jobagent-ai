@@ -179,8 +179,16 @@ IMPORTANT : Utilise les expériences passées du candidat (si fournies) pour ren
 {candidate_context}
 Attends ensuite sa réponse. Ne pose pas plusieurs questions à la fois."""
         
-        chain = ChatPromptTemplate.from_messages([("system", prompt_system)]) | self.llm
-        return chain.invoke({}).content
+        # Groq/Qwen exige au moins un message "human" — on ajoute un déclencheur neutre
+        chain = ChatPromptTemplate.from_messages([
+            ("system", prompt_system),
+            ("human", "Commence l'entretien."),
+        ]) | self.llm
+        try:
+            return chain.invoke({}).content
+        except Exception as e:
+            print(f"Erreur init_interview : {e}")
+            return f"Bonjour ! Je suis ravi de vous accueillir pour cet entretien concernant le poste de **{job.get('title', 'ce poste')}** chez **{job.get('company', 'notre structure')}**. Pouvez-vous commencer par me parler de votre parcours et de ce qui vous a motivé à postuler ?"
     # ─────────────────────────────────────────
     #  RAG : INDEXATION & RETRIEVAL
     # ─────────────────────────────────────────
