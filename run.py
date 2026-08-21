@@ -10,6 +10,8 @@ Utilisation :
     python run.py --port 8502  # Port personnalisé
 """
 import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
 import os
 import subprocess
 import argparse
@@ -56,7 +58,7 @@ def run_app(port: str, no_auth: bool = False):
     """Lance l'application Streamlit"""
     # Si --no-auth, lancer directement app.py sans login
     app_path = ROOT / "ui" / "app.py" if no_auth else ROOT / "run_streamlit.py"
-    print(f"\nLancement de JobAgent AI sur http://localhost:{port}")
+    print(f"\nLancement de Fanboulot sur http://localhost:{port}")
     print("Ctrl+C pour arrêter\n")
     cmd = [
         sys.executable, "-m", "streamlit", "run",
@@ -68,7 +70,7 @@ def run_app(port: str, no_auth: bool = False):
     subprocess.run(cmd, cwd=str(ROOT))
 def main():
     parser = argparse.ArgumentParser(
-        description="JobAgent AI — Système Multi-Agents de Recherche d'Emploi"
+        description="Fanboulot — Système Multi-Agents de Recherche d'Emploi"
     )
     parser.add_argument("--check",   action="store_true",
                         help="Vérifie la configuration sans lancer l'app")
@@ -88,8 +90,8 @@ def main():
     if args.no_auth:
         os.environ["JOBAGENT_NO_AUTH"] = "1"
     print("=" * 55)
-    print("    JobAgent AI — Système Multi-Agents")
-    print("    Mainto Studio &copy; 2026")
+    print("    Fanboulot — Système Multi-Agents")
+    print("    By Stel_IT © 2026")
     print("=" * 55)
     ok = check_config()
     if args.check:

@@ -30,7 +30,7 @@ THEMES = {
     },
     "light": {
         "bg_main":    "#FAFAF7",
-        "bg_card":    "#FAFAF7",
+        "bg_card":    "#F0F0EB",
         "text_main":  "#0B1220",
         "text_muted": "#8B93A7",
         "text_subtle":"#5D6883",
@@ -57,7 +57,7 @@ def render_login_page():
     <script>
     (function() {
         try {
-            const saved = localStorage.getItem('jobagent_theme');
+            const saved = localStorage.getItem('fanboulot_theme');
             const params = new URLSearchParams(window.parent.location.search);
             if (saved && !params.has('theme')) {
                 // Thème en localStorage mais absent de l'URL → rediriger pour que Python le lise
@@ -66,7 +66,7 @@ def render_login_page():
                 window.parent.location.reload();
             } else if (params.has('theme')) {
                 // Synchroniser localStorage avec l'URL courante
-                localStorage.setItem('jobagent_theme', params.get('theme'));
+                localStorage.setItem('fanboulot_theme', params.get('theme'));
             }
         } catch(e) {}
     })();

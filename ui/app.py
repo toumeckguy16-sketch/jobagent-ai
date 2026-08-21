@@ -1,7 +1,7 @@
-"""
-Interface Utilisateur Streamlit — JobAgent AI
-Deux thèmes : Sombre (#0F0F0F / #E5E5E5 / #FF6B00)
-              Clair  (#FFFFFF / #16A34A / #DC2626)
+﻿"""
+Interface Utilisateur Streamlit — Fanboulot
+Deux thèmes : Sombre (#0B1220 / #EDEFF3 / #00C896)
+              Clair  (#FAFAF7 / #0B1220 / #00C896)
 Quiz QCM avec correction automatique et score final.
 """
 
@@ -31,7 +31,7 @@ from auth.auth_manager import AuthManager
 # CONFIGURATION DE LA PAGE
 # ============================================================
 st.set_page_config(
-    page_title="JobAgent AI",
+    page_title="Fanboulot",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -117,7 +117,7 @@ def init_session():
                     st.markdown(f"""
                     <script>
                     try {{
-                        localStorage.setItem('jobagent_session', '{user_json}');
+                        localStorage.setItem('fanboulot_session', '{user_json}');
                     }} catch(e) {{}}
                     </script>
                     """, unsafe_allow_html=True)
@@ -134,7 +134,7 @@ def init_session():
                         st.markdown("""
                         <script>
                         try {
-                            localStorage.removeItem('jobagent_session');
+                            localStorage.removeItem('fanboulot_session');
                         } catch(e) {}
                         </script>
                         """, unsafe_allow_html=True)
@@ -148,7 +148,7 @@ def init_session():
                     st.markdown("""
                     <script>
                     try {
-                        localStorage.removeItem('jobagent_session');
+                        localStorage.removeItem('fanboulot_session');
                     } catch(e) {}
                     </script>
                     """, unsafe_allow_html=True)
@@ -256,7 +256,7 @@ st.markdown("""
 <script>
 (function() {
     try {
-        const saved = localStorage.getItem('jobagent_theme');
+        const saved = localStorage.getItem('fanboulot_theme');
         const params = new URLSearchParams(window.parent.location.search);
         if (saved && !params.has('theme')) {
             // Thème en localStorage mais absent de l'URL → rediriger pour que Python le lise
@@ -265,7 +265,7 @@ st.markdown("""
             window.parent.location.reload();
         } else if (params.has('theme')) {
             // Synchroniser localStorage avec l'URL courante
-            localStorage.setItem('jobagent_theme', params.get('theme'));
+            localStorage.setItem('fanboulot_theme', params.get('theme'));
         }
     } catch(e) {}
 })();
@@ -277,42 +277,44 @@ st.markdown("""
 # ============================================================
 THEMES = {
     "dark": {
-        "bg_main":      "#0F0F0F",
-        "bg_card":      "#1A1A1A",
-        "bg_sidebar":   "#111111",
-        "bg_input":     "#1F1F1F",
-        "text_main":    "#E5E5E5",
-        "text_muted":   "#888888",
-        "text_subtle":  "#555555",
-        "accent":       "#FF6B00",
-        "accent_hover": "#FF8C33",
-        "border":       "#2A2A2A",
-        "border_focus": "#FF6B00",
-        "success":      "#22C55E",
+        "bg_main":      "#0B1220",
+        "bg_card":      "#121B2E",
+        "bg_sidebar":   "#0B1220",
+        "bg_input":     "#121B2E",
+        "text_main":    "#EDEFF3",
+        "text_muted":   "#8B93A7",
+        "text_subtle":  "#5D6883",
+        "accent":       "#00C896",
+        "accent_hover": "#00966F",
+        "border":       "#22304A",
+        "border_focus": "#00C896",
+        "success":      "#00C896",
         "error":        "#EF4444",
-        "warning":      "#F59E0B",
-        "progress":     "#FF6B00",
-        "bg_backdrop":  "rgba(0, 0, 0, 0.7)",
+        "warning":      "#F2B84B",
+        "progress":     "#00C896",
+        "bg_backdrop":  "rgba(11, 18, 32, 0.8)",
         "toggle_label": "Thème clair",
+        "gold":         "#F2B84B",
     },
     "light": {
-        "bg_main":      "#FFFFFF",
-        "bg_card":      "#F5F5F5",
-        "bg_sidebar":   "#FAFAFA",
+        "bg_main":      "#FAFAF7",
+        "bg_card":      "#F0F0EB",
+        "bg_sidebar":   "#FAFAF7",
         "bg_input":     "#FFFFFF",
-        "text_main":    "#111111",
-        "text_muted":   "#555555",
-        "text_subtle":  "#999999",
-        "accent":       "#DC2626",
-        "accent_hover": "#16A34A",
+        "text_main":    "#0B1220",
+        "text_muted":   "#8B93A7",
+        "text_subtle":  "#5D6883",
+        "accent":       "#00C896",
+        "accent_hover": "#00966F",
         "border":       "#E0E0E0",
-        "border_focus": "#DC2626",
-        "success":      "#16A34A",
-        "error":        "#DC2626",
-        "warning":      "#D97706",
-        "progress":     "#DC2626",
-        "bg_backdrop":  "rgba(255, 255, 255, 0.4)",
+        "border_focus": "#00C896",
+        "success":      "#00C896",
+        "error":        "#EF4444",
+        "warning":      "#F2B84B",
+        "progress":     "#00C896",
+        "bg_backdrop":  "rgba(250, 250, 247, 0.8)",
         "toggle_label": "Thème sombre",
+        "gold":         "#F2B84B",
     }
 }
 
@@ -353,7 +355,7 @@ def show_job_analysis(job):
         <div style='text-align:center; background:{T["bg_main"]};
                     border-radius:10px; padding:20px;
                     border:2px solid {color};'>
-            <div style='font-family:Roboto,sans-serif; font-size:2.2em;
+            <div style='font-family:"Space Grotesk",sans-serif; font-size:2.2em;
                         font-weight:800; color:{color};'>{score}%</div>
             <div style='color:{T["text_muted"]}; font-size:0.8em;'>Match</div>
         </div>
@@ -371,7 +373,7 @@ def show_job_analysis(job):
             llm_display = "N/A"
         
         st.markdown(f"""
-        <div style='text-align:center; margin-top:8px; font-family:Roboto,sans-serif; font-size:0.85em; color:{T["text_main"]}; line-height:1.4;'>
+        <div style='text-align:center; margin-top:8px; font-family:"Space Grotesk",sans-serif; font-size:0.85em; color:{T["text_main"]}; line-height:1.4;'>
             Score vectoriel : <strong>{vec_display}</strong><br>
             Score LLM : <strong>{llm_display}</strong>
         </div>
@@ -427,11 +429,11 @@ def show_job_analysis(job):
 # ============================================================
 st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
 
 html, body, .stApp {{
     background-color: {T['bg_main']} !important;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Manrope', sans-serif;
     color: {T['text_main']} !important;
 }}
 
@@ -448,7 +450,7 @@ header[data-testid="stHeader"] {{
 [data-testid="stSidebar"] * {{ color: {T['text_main']} !important; }}
 
 h1, h2, h3 {{
-    font-family: 'Roboto', sans-serif !important;
+    font-family: 'Space Grotesk', sans-serif !important;
     color: {T['text_main']} !important;
 }}
 
@@ -456,13 +458,13 @@ h1 {{
     font-size: 1.5em !important;
 }}
 
-/* Boutons transparents avec bordure orange (Interface principale) */
+/* Boutons transparents avec bordure accent (Interface principale) */
 .stButton > button {{
     background: transparent !important;
     color: {T['text_main']} !important;
     border: 1px solid {T['accent']} !important;
     border-radius: 8px !important;
-    font-family: 'Roboto', sans-serif !important;
+    font-family: 'Manrope', sans-serif !important;
     font-weight: 500 !important;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }}
@@ -634,7 +636,7 @@ section[data-testid="stSidebar"][aria-expanded="false"] .stButton button {{
     border: 1px solid {T['border']} !important;
     border-radius: 8px !important;
     color: {T['text_main']} !important;
-    font-family: 'DM Sans', sans-serif !important;
+    font-family: 'Manrope', sans-serif !important;
 }}
 
 .stTextInput input:focus, .stTextArea textarea:focus {{
@@ -672,7 +674,7 @@ section[data-testid="stSidebar"][aria-expanded="false"] .stButton button {{
 }}
     
 [data-testid="stTabs"] button {{
-    font-family: 'Roboto', sans-serif !important;
+    font-family: 'Space Grotesk', sans-serif !important;
     font-weight: 600 !important;
     color: {T['text_muted']} !important;
     background: transparent !important;
@@ -692,7 +694,7 @@ section[data-testid="stSidebar"][aria-expanded="false"] .stButton button {{
 [data-testid="stExpander"] summary {{
     background-color: {T['bg_card']} !important;
     color: {T['text_main']} !important;
-    font-family: 'Roboto', sans-serif !important;
+    font-family: 'Space Grotesk', sans-serif !important;
 }}
 
 [data-testid="stExpander"] [data-testid="stExpanderDetails"] {{
@@ -753,7 +755,7 @@ section[data-testid="stSidebar"][aria-expanded="false"] .stButton button {{
 
 [data-testid="stMetricValue"] {{
     color: {T['accent']} !important;
-    font-family: 'Roboto', sans-serif !important;
+    font-family: 'Space Grotesk', sans-serif !important;
     font-weight: 700 !important;
 }}
 
@@ -856,11 +858,11 @@ div[data-testid="stDialog"] hr, div[role="dialog"] hr {{
     border-radius: 20px;
     font-size: 0.8em;
     margin: 3px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Manrope', sans-serif;
 }}
 
 .section-label {{
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Space Grotesk', sans-serif;
     font-size: 0.72em;
     font-weight: 700;
     letter-spacing: 2px;
@@ -878,9 +880,9 @@ div[data-testid="stDialog"] hr, div[role="dialog"] hr {{
 }}
 
 .hero-title {{
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Space Grotesk', sans-serif;
     font-size: 2.2em;
-    font-weight: 800;
+    font-weight: 700;
     color: {T['text_main']};
     margin: 0 0 6px 0;
     letter-spacing: -1px;
@@ -900,9 +902,9 @@ div[data-testid="stDialog"] hr, div[role="dialog"] hr {{
 }}
 
 .stat-number {{
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Space Grotesk', sans-serif;
     font-size: 1.9em;
-    font-weight: 800;
+    font-weight: 700;
     color: {T['accent']};
 }}
 
@@ -1008,7 +1010,7 @@ div[data-testid="stDialog"] hr, div[role="dialog"] hr {{
     font-size: 0.9em;
 }}
 
-.mono {{ font-family: 'DM Mono', monospace; font-size: 0.85em; color: {T['accent']}; }}
+.mono {{ font-family: 'ui-monospace', 'Consolas', monospace; font-size: 0.85em; color: {T['accent']}; }}
 
 /* Masquer le placeholder lors du clic (focus) sur le chat coach */
 [data-testid="stChatInput"] textarea:focus::placeholder {{
@@ -1130,8 +1132,8 @@ def _run_search_pipeline(user_profile: str):
 with st.sidebar:
     st.markdown(f"""
     <div class='sidebar-logo' style='padding: 0 10px 30px 10px; margin-top: -30px; text-align: center;'>
-        <div style='font-family:Roboto,sans-serif; font-size:1.4em; font-weight:900;
-                    color:{T["text_main"]}; letter-spacing: -0.5px;'>JobAgent AI</div></div>
+        <div style='font-family:"Space Grotesk",sans-serif; font-size:1.4em; font-weight:700;
+                    color:{T["text_main"]}; letter-spacing: -0.5px;'>Fanboulot</div></div>
     """, unsafe_allow_html=True)
 
 
@@ -1166,7 +1168,7 @@ with st.sidebar:
         p = st.session_state.candidate_profile
         img_url = p.get("profile_image_url")
         if not img_url:
-            img_url = "https://ui-avatars.com/api/?name=" + p.get("full_name", "U").replace(" ", "+") + "&background=FF6B00&color=fff"
+            img_url = "https://ui-avatars.com/api/?name=" + p.get("full_name", "U").replace(" ", "+") + "&background=00C896&color=fff"
         
         # Masquage correct de l'uploader via CSS
         st.markdown("<style>[data-testid='stSidebar'] div[data-testid='stFileUploader'] { display: none !important; }</style>", unsafe_allow_html=True)
@@ -1217,7 +1219,7 @@ with st.sidebar:
                     st.markdown("""
                     <script>
                     try {
-                        localStorage.removeItem('jobagent_session');
+                        localStorage.removeItem('fanboulot_session');
                     } catch(e) {}
                     </script>
                     """, unsafe_allow_html=True)
@@ -1313,7 +1315,7 @@ with st.sidebar:
 
     st.markdown(f"""
     <div style='text-align:center; color:{T["text_subtle"]}; font-size:0.65em; margin-top: 5px;'>
-        Mainto Studio &copy; 2026
+        By Stel_IT &copy; 2026
     </div>
     """, unsafe_allow_html=True)
 
@@ -1329,7 +1331,7 @@ if page == "Dashboard":
     st.markdown(f"""
     <div class='hero'>
         <div style='font-size: 0.85em; font-weight: 700; color: {T["accent"]}; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;'>{welcome_msg}</div>
-        <h1 class='hero-title'>JobAgent AI</h1>
+        <h1 class='hero-title'>Fanboulot</h1>
         <p class='hero-sub'>
             Système multi-agents de recherche d'emploi personnalisé &nbsp;·&nbsp; Cameroun
         </p>
@@ -1388,7 +1390,7 @@ if page == "Dashboard":
         table_html = (
             "<div style='background:" + T["bg_card"] + ";border:1px solid " + T["border"] + ";"
             "border-radius:12px;overflow:hidden;margin-top:10px;'>"
-            "<table style='width:100%;border-collapse:collapse;font-family:Roboto,sans-serif;font-size:0.85em;'>"
+            "<table style='width:100%;border-collapse:collapse;font-family:"Space Grotesk",sans-serif;font-size:0.85em;'>"
             "<thead><tr style='background:" + T["bg_main"] + ";border-bottom:1px solid " + T["border"] + ";text-align:left;'>"
             "<th style='padding:10px 12px;color:" + T["text_muted"] + ";font-size:0.72em;text-transform:uppercase;letter-spacing:1px;'>Site</th>"
             "<th style='padding:10px 12px;color:" + T["text_muted"] + ";font-size:0.72em;text-transform:uppercase;letter-spacing:1px;'>Rejets</th>"
@@ -1432,7 +1434,7 @@ if page == "Dashboard":
                 with h_col1:
                     st.markdown(f"""
                     <div class='card' style='margin:0; padding:12px 18px; border-left:4px solid {T["accent"]}33;'>
-                        <div style='font-family:Roboto,sans-serif; font-weight:700; font-size:0.95em;'>{dt_str}</div>
+                        <div style='font-family:"Space Grotesk",sans-serif; font-weight:700; font-size:0.95em;'>{dt_str}</div>
                         <div style='font-size:0.82em; color:{T["text_muted"]}; margin-top:3px;'>
                             Profil : {query_prev[:120]}...
                         </div>
@@ -1553,7 +1555,7 @@ elif page == "Profil":
 
         st.markdown(f"""
 <div class='card-accent' style='min-height: fit-content;'>
-<div style='font-family:Roboto,sans-serif; font-size:1.4em; font-weight:800; color:{T["text_main"]};'>
+<div style='font-family:"Space Grotesk",sans-serif; font-size:1.4em; font-weight:800; color:{T["text_main"]};'>
 {p.get("full_name","N/A")}
 </div>
 <div style='color:{T["accent"]}; margin-top:4px;'>
@@ -1706,7 +1708,7 @@ elif page == "Profil":
 
             with col_tips:
                 st.markdown(f"""<div class='card'>
-                    <div style='font-family:Roboto,sans-serif; font-weight:700;
+                    <div style='font-family:"Space Grotesk",sans-serif; font-weight:700;
                                 color:{T["accent"]}; margin-bottom:12px;'>Conseils</div>
                     <div style='color:{T["text_main"]}; font-size:0.85em; line-height:1.9;'>
                         Mentionnez vos competences techniques<br>
@@ -1725,7 +1727,7 @@ elif page == "Offres d'emploi":
         st.markdown(f"""
         <div style='background:{T["bg_card"]}; border:1px dashed {T["border"]};
                     border-radius:14px; padding:48px; text-align:center;'>
-            <div style='color:{T["accent"]}; font-family:Roboto,sans-serif;
+            <div style='color:{T["accent"]}; font-family:"Space Grotesk",sans-serif;
                         font-size:1.1em; margin-top:10px;'>Aucune recherche lancée</div>
             <div style='color:{T["text_muted"]}; font-size:0.9em; margin-top:8px;'>
                 Renseignez votre profil dans l'onglet Mon Profil et lancez la recherche.
@@ -1835,7 +1837,7 @@ elif page == "Offres d'emploi":
                         <div style='text-align:center; background:{T["bg_main"]};
                                     border-radius:10px; padding:18px;
                                     border:1px solid {T["border"]};'>
-                            <div style='font-family:Roboto,sans-serif; font-size:1.8em;
+                            <div style='font-family:"Space Grotesk",sans-serif; font-size:1.8em;
                                         font-weight:800; color:{color};'>{score}%</div>
                             <div style='color:{T["text_muted"]}; font-size:0.78em;
                                         margin-top:4px;'>Compatibilité</div>
@@ -1887,14 +1889,14 @@ elif page == "Analyse":
                 <div style='color:{T["text_muted"]}; font-size:0.75em; font-weight:700;
                             letter-spacing:2px; text-transform:uppercase;
                             margin-bottom:6px;'>Meilleure correspondance</div>
-                <div style='font-family:Roboto,sans-serif; font-size:1.3em;
+                <div style='font-family:"Space Grotesk",sans-serif; font-size:1.3em;
                             font-weight:800; color:{T["text_main"]};'>
                     {best["title"]} — {best["company"]}
                 </div>
                 <div style='color:{T["text_muted"]}; font-size:0.85em; margin-top:5px;'>
                     {best.get("location", "N/A")}
                 </div>
-                <div style='font-family:Roboto,sans-serif; font-size:2em;
+                <div style='font-family:"Space Grotesk",sans-serif; font-size:2em;
                             font-weight:800; color:{T["accent"]}; margin-top:10px;'>
                     {best.get("score", 0)}%
                     <span style='font-size:0.4em; color:{T["text_muted"]};'>
@@ -1919,7 +1921,7 @@ elif page == "Analyse":
             with col_b:
                 st.markdown(
                     f"<div style='text-align:right; color:{color}; font-weight:700;"
-                    f"font-family:Roboto,sans-serif; font-size:1.2em;'>{score}%</div>",
+                    f"font-family:"Space Grotesk",sans-serif; font-size:1.2em;'>{score}%</div>",
                     unsafe_allow_html=True
                 )
 
@@ -1982,7 +1984,7 @@ elif page == "Préparation à l'entretien":
             st.markdown(f"""
             <div style='background:{T["bg_card"]}; border:1px dashed {T["border"]};
                         border-radius:14px; padding:48px; text-align:center;'>
-                <div style='color:{T["accent"]}; font-family:Roboto,sans-serif; font-size:1.1em;'>
+                <div style='color:{T["accent"]}; font-family:"Space Grotesk",sans-serif; font-size:1.1em;'>
                     Aucune offre sélectionnée
                 </div>
                 <div style='color:{T["text_muted"]}; font-size:0.9em; margin-top:8px;'>
@@ -1998,7 +2000,7 @@ elif page == "Préparation à l'entretien":
             <div class='card-accent'>
                 <div style='color:{T["text_muted"]}; font-size:0.75em; font-weight:700;
                             letter-spacing:2px; text-transform:uppercase;'>Offre sélectionnée</div>
-                <div style='font-family:Roboto,sans-serif; font-size:1.2em;
+                <div style='font-family:"Space Grotesk",sans-serif; font-size:1.2em;
                             font-weight:800; color:{T["text_main"]}; margin-top:6px;'>
                     {job["title"]}
                     <span style='color:{T["text_muted"]}; font-weight:400; font-size:0.8em;'>
@@ -2067,7 +2069,7 @@ elif page == "Préparation à l'entretien":
 
                     # 1. Barre de progression moderne & stylée
                     st.markdown(f"""
-                    <div style='margin-bottom: 22px; font-family: "Roboto", sans-serif;'>
+                    <div style='margin-bottom: 22px; font-family: "Space Grotesk", sans-serif;'>
                         <div style='display: flex; justify-content: space-between; font-size: 0.9em; font-weight: 700; color: {T["text_main"]}; margin-bottom: 8px;'>
                             <span>Question {current_question_num} / {nb_total}</span>
                             <span>{pct}%</span>
@@ -2090,10 +2092,10 @@ elif page == "Préparation à l'entretien":
                         <span style='background:{T["accent"]}22; color:{T["accent"]};
                                      border:1px solid {T["accent"]}44; padding:2px 10px;
                                      border-radius:20px; font-size:0.75em;
-                                     font-family:Roboto,sans-serif; font-weight:700;'>
+                                     font-family:"Space Grotesk",sans-serif; font-weight:700;'>
                             {label}
                         </span>
-                        <div style='font-family:Roboto,sans-serif; font-weight:700;
+                        <div style='font-family:"Space Grotesk",sans-serif; font-weight:700;
                                     color:{T["text_main"]}; font-size:1.05em;
                                     margin:12px 0 16px; line-height:1.4;'>
                             Q{qid}. {q.get("question", "")}
@@ -2172,7 +2174,7 @@ elif page == "Préparation à l'entretien":
                     st.markdown(f"""
                     <div class='score-box' style='border-top: 4px solid {color}; background: {T["bg_card"]}; padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);'>
                         <div style='font-size: 1.1em; font-weight: bold; color: {T["text_muted"]}; margin-bottom: 8px;'>Votre Score Final</div>
-                        <div style='font-family: Roboto, sans-serif; font-size: 3.5em; font-weight: 900; color: {color}; line-height: 1;'>{correct_count} <span style='font-size: 0.5em; color: {T["text_muted"]}; font-weight: 500;'>/ {total}</span></div>
+                        <div style='font-family: "Space Grotesk", sans-serif; font-size: 3.5em; font-weight: 900; color: {color}; line-height: 1;'>{correct_count} <span style='font-size: 0.5em; color: {T["text_muted"]}; font-weight: 500;'>/ {total}</span></div>
                         <div style='font-size: 1.5em; font-weight: 800; color: {color}; margin-top: 8px;'>{pct}% Réussite</div>
                         <div style='color: {T["text_main"]}; font-size: 0.95em; font-weight: 500; margin-top: 15px; border-top: 1px solid {T["border"]}55; padding-top: 15px;'>{msg}</div>
                     </div>
@@ -2312,7 +2314,7 @@ elif page == "Préparation à l'entretien":
                                 AuthManager.save_chat_history(uid, st.session_state.chat_history)
                             st.rerun()
 
-                st.markdown(f"<div style='background:{T['bg_card']}; border:1px dashed {T['border']}; border-radius:14px; padding:48px; text-align:center; margin-top:16px;'><div style='font-size:1.8em;'>&#128172;</div><div style='font-family:Roboto,sans-serif; font-weight:700; color:{T['text_main']}; margin-top:12px;'>Prêt pour votre entretien ?</div><div style='color:{T['text_muted']}; font-size:0.9em; margin-top:8px;'>Cliquez sur <b>Commencer un nouvel entretien virtuel</b> pour démarrer,<br>ou reprenez une conversation depuis l'historique.</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:{T['bg_card']}; border:1px dashed {T['border']}; border-radius:14px; padding:48px; text-align:center; margin-top:16px;'><div style='font-size:1.8em;'>&#128172;</div><div style='font-family:"Space Grotesk",sans-serif; font-weight:700; color:{T['text_main']}; margin-top:12px;'>Prêt pour votre entretien ?</div><div style='color:{T['text_muted']}; font-size:0.9em; margin-top:8px;'>Cliquez sur <b>Commencer un nouvel entretien virtuel</b> pour démarrer,<br>ou reprenez une conversation depuis l'historique.</div></div>", unsafe_allow_html=True)
             
             else:
                 col_back, _ = st.columns([1, 6])
@@ -2642,7 +2644,7 @@ elif page == "Paramètres":
             st.markdown("""
             <script>
             try {
-                localStorage.setItem('jobagent_theme', 'dark');
+                localStorage.setItem('fanboulot_theme', 'dark');
             } catch(e) {}
             </script>
             """, unsafe_allow_html=True)
@@ -2660,7 +2662,7 @@ elif page == "Paramètres":
             st.markdown("""
             <script>
             try {
-                localStorage.setItem('jobagent_theme', 'light');
+                localStorage.setItem('fanboulot_theme', 'light');
             } catch(e) {}
             </script>
             """, unsafe_allow_html=True)
@@ -2781,7 +2783,7 @@ elif page == "Abonnement":
 
     if not st.session_state.abo_show_form and not st.session_state.abo_payment_sent:
         _header_html = (
-            f"<div style='font-family:Roboto,sans-serif; font-size:1.05em; font-weight:700; color:{_txt_main}; margin:20px 0 6px;'>Choisissez votre offre</div>"
+            f"<div style='font-family:"Space Grotesk",sans-serif; font-size:1.05em; font-weight:700; color:{_txt_main}; margin:20px 0 6px;'>Choisissez votre offre</div>"
             f"<div style='color:{_txt_muted}; font-size:0.82em; margin-bottom:16px;'>Paiement via Mobile Money (Orange Money / MTN MoMo Cameroun)</div>"
         )
         st.markdown(_header_html, unsafe_allow_html=True)
@@ -2798,9 +2800,9 @@ elif page == "Abonnement":
                 _card_markup = (
                     f"<div class='card-accent' style='min-height:240px;'>"
                     f"{_pop_div}"
-                    f"<div style='font-family:Roboto,sans-serif; font-size:0.95em; font-weight:800; color:{_txt_main}; margin-bottom:2px;'>{_pl_nom}</div>"
+                    f"<div style='font-family:"Space Grotesk",sans-serif; font-size:0.95em; font-weight:800; color:{_txt_main}; margin-bottom:2px;'>{_pl_nom}</div>"
                     f"<div style='color:{_txt_muted}; font-size:0.78em; margin-bottom:10px;'>{_pl_sub}</div>"
-                    f"<div style='font-size:1.5em; font-weight:900; color:{_accent_col}; font-family:Roboto,sans-serif;'>{_pl_prix} <span style='font-size:0.4em; color:{_txt_muted}; font-weight:400;'>{_pl_per}</span></div>"
+                    f"<div style='font-size:1.5em; font-weight:900; color:{_accent_col}; font-family:"Space Grotesk",sans-serif;'>{_pl_prix} <span style='font-size:0.4em; color:{_txt_muted}; font-weight:400;'>{_pl_per}</span></div>"
                     f"<div style='margin-top:10px;'>{_f_items}</div>"
                     f"</div>"
                 )
@@ -2819,18 +2821,18 @@ elif page == "Abonnement":
         _choice_box = (
             f"<div class='card-accent' style='margin-bottom:8px;'>"
             f"<div style='color:{_txt_subtle}; font-size:0.72em; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;'>Plan choisi</div>"
-            f"<div style='font-family:Roboto,sans-serif; font-size:1.05em; font-weight:800; color:{_txt_main};'>{_pl_nom} — {_pl_prix} {_pl_per}</div>"
+            f"<div style='font-family:"Space Grotesk",sans-serif; font-size:1.05em; font-weight:800; color:{_txt_main};'>{_pl_nom} — {_pl_prix} {_pl_per}</div>"
             f"</div>"
             f"<div class='card' style='margin-bottom:16px;'>"
             f"<div style='font-weight:700; font-size:0.95em; color:{_txt_main}; margin-bottom:12px;'>Déposez le montant sur l'un de ces numéros Mobile Money :</div>"
             f"<div style='display:flex; gap:20px; flex-wrap:wrap;'>"
             f"<div style='background:{_bg_main}; border:2px solid {_accent_col}; border-radius:12px; padding:14px 22px; text-align:center;'>"
             f"<div style='font-size:0.72em; color:{_txt_muted}; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;'>Orange Money</div>"
-            f"<div style='font-size:1.4em; font-weight:900; color:{_accent_col}; font-family:Roboto,sans-serif; letter-spacing:2px;'>690 380 150</div>"
+            f"<div style='font-size:1.4em; font-weight:900; color:{_accent_col}; font-family:"Space Grotesk",sans-serif; letter-spacing:2px;'>690 380 150</div>"
             f"</div>"
             f"<div style='background:{_bg_main}; border:2px solid {_accent_col}; border-radius:12px; padding:14px 22px; text-align:center;'>"
             f"<div style='font-size:0.72em; color:{_txt_muted}; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;'>MTN Mobile Money</div>"
-            f"<div style='font-size:1.4em; font-weight:900; color:{_accent_col}; font-family:Roboto,sans-serif; letter-spacing:2px;'>653 301 970</div>"
+            f"<div style='font-size:1.4em; font-weight:900; color:{_accent_col}; font-family:"Space Grotesk",sans-serif; letter-spacing:2px;'>653 301 970</div>"
             f"</div>"
             f"</div>"
             f"<div style='color:{_txt_muted}; font-size:0.82em; margin-top:10px;'>Conservez la confirmation de votre transaction avant de remplir le formulaire.</div>"
@@ -2870,9 +2872,9 @@ elif page == "Abonnement":
         _succ_card = (
             f"<div class='card-accent' style='text-align:center; padding:40px;'>"
             f"<div style='font-size:2.5em; margin-bottom:16px;'>🎉</div>"
-            f"<div style='font-family:Roboto,sans-serif; font-size:1.2em; font-weight:800; color:{_txt_main}; margin-bottom:10px;'>Demande soumise avec succès !</div>"
+            f"<div style='font-family:"Space Grotesk",sans-serif; font-size:1.2em; font-weight:800; color:{_txt_main}; margin-bottom:10px;'>Demande soumise avec succès !</div>"
             f"<div style='color:{_txt_muted}; font-size:0.88em; max-width:440px; margin:0 auto;'>"
-            f"Votre demande a bien été reçue. L'équipe JobAgent AI va valider votre paiement "
+            f"Votre demande a bien été reçue. L'équipe Fanboulot va valider votre paiement "
             f"sous 2h en heures ouvrables. Vous pourrez ensuite utiliser toutes les fonctionnalités sans restriction."
             f"</div>"
             f"</div>"

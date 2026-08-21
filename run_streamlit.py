@@ -75,8 +75,8 @@ st.components.v1.html("""
 (function() {
     const parentWindow = window.parent;
     try {
-        const savedTheme = parentWindow.localStorage.getItem('jobagent_theme');
-        const savedSession = parentWindow.localStorage.getItem('jobagent_session');
+        const savedTheme = parentWindow.localStorage.getItem('fanboulot_theme');
+        const savedSession = parentWindow.localStorage.getItem('fanboulot_session');
         const params = new URLSearchParams(parentWindow.location.search);
         let needsRedirect = false;
         
