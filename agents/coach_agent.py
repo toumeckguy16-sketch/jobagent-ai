@@ -105,9 +105,16 @@ Réponds de façon constructive, encourage le candidat et donne des exemples con
             max_tokens=1024,
             model=model,
         )
-        self.embeddings = OpenAIEmbeddings(
-            api_key=os.getenv("OPENAI_API_KEY")
-        )
+        # OpenAIEmbeddings est optionnel : si OPENAI_API_KEY est absent (Streamlit Cloud
+        # sans clé OpenAI), on désactive les embeddings sans faire planter l'agent.
+        openai_key = os.getenv("OPENAI_API_KEY", "")
+        if openai_key:
+            try:
+                self.embeddings = OpenAIEmbeddings(api_key=openai_key)
+            except Exception:
+                self.embeddings = None
+        else:
+            self.embeddings = None
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=500, chunk_overlap=50
         )
@@ -389,7 +396,7 @@ Niveau d'éducation : {skills.get('education_level', '')}
 Langues : {', '.join(skills.get('languages', []))}
 """
         self.raw_job_text = job_text
-        if not CHROMA_AVAILABLE:
+        if not CHROMA_AVAILABLE or not self.embeddings:
             self.vectorstore = None
             return
 
