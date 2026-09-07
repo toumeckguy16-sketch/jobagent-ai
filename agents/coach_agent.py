@@ -448,6 +448,65 @@ RÈGLES STRICTES ET OBLIGATOIRES POUR LE RECRUTEUR :
             return f"Bonjour ! Je suis ravi de vous accueillir pour cet entretien concernant le poste de **{job.get('title', 'ce poste')}** chez **{job.get('company', 'notre structure')}**. Pouvez-vous commencer par me parler de votre parcours et de ce qui vous a motivé à postuler ?"
 
     # ─────────────────────────────────────────
+    #  RECOMMANDATIONS PERSONNALISÉES DU COACH
+    # ─────────────────────────────────────────
+    def generate_recommendations(self, job: dict, candidate_profile: dict = None, analysis: dict = None) -> List[str]:
+        """
+        Génère 3-4 recommandations personnalisées du coach basées sur les écarts réels
+        (compétences manquantes, mise en valeur du parcours, conseils entretien/candidature).
+        """
+        # Si des recommandations existent déjà dans l'analyse et sont non vides, les réutiliser
+        if analysis and analysis.get("recommendations") and isinstance(analysis["recommendations"], list) and len(analysis["recommendations"]) >= 2:
+            return [str(r).strip() for r in analysis["recommendations"] if r and str(r).strip()]
+
+        skills = job.get("skills", {})
+        hard_skills = skills.get("hard_skills", [])
+        tools = skills.get("tools", [])
+        job_reqs = ", ".join([s for s in (hard_skills + tools) if s]) or "Non spécifiées explicitement"
+
+        missing_skills = []
+        matching_skills = []
+        if analysis:
+            missing_skills = analysis.get("missing_skills", [])
+            matching_skills = analysis.get("matching_skills", [])
+
+        candidate_info = self._format_candidate_context(candidate_profile)
+
+        prompt_system = """Tu es un coach expert en recrutement et insertion professionnelle.
+Analyse le poste visé et les écarts avec le profil du candidat pour lui donner des recommandations d'action très concrètes.
+Retourne UNIQUEMENT un objet JSON avec la clé 'recommendations' contenant une liste de 3 à 4 phrases de conseils :
+{"recommendations": ["conseil 1", "conseil 2", "conseil 3", "conseil 4"]}"""
+
+        prompt_user = f"""Offre : {job.get('title', 'Poste')} chez {job.get('company', 'Entreprise')}
+Compétences requises : {job_reqs}
+Compétences déjà validées : {', '.join(matching_skills) if matching_skills else 'Non détaillées'}
+Compétences manquantes ou à renforcer : {', '.join(missing_skills) if missing_skills else 'À identifier'}
+
+{candidate_info}
+
+Donne 3-4 recommandations personnalisées :
+1. Comment combler ou compenser les compétences manquantes (auto-formation, certifications, mise en avant d'outils similaires).
+2. Quelle expérience passée valoriser en priorité.
+3. Un conseil d'impact pour son CV ou sa candidature.
+4. Un conseil stratégique pour l'entretien d'embauche sur ce poste."""
+
+        try:
+            res = invoke_json(self.llm, [("system", prompt_system), ("human", prompt_user)])
+            recs = res.get("recommendations", [])
+            if isinstance(recs, list) and recs:
+                return [str(r).strip() for r in recs if r and str(r).strip()]
+        except Exception as e:
+            print(f"[CoachAgent] Erreur generate_recommendations : {e}")
+
+        # Secours personnalisé en cas d'erreur API
+        fallback = []
+        if missing_skills:
+            fallback.append(f"Compétences clés à valoriser ou consolider : {', '.join(missing_skills[:3])}.")
+        fallback.append(f"Personnalisez votre CV en intégrant le vocabulaire exact de l'offre pour **{job.get('title', 'ce poste')}**.")
+        fallback.append("Structurez vos réponses d'entretien avec la méthode STAR (Situation, Tâche, Action, Résultat).")
+        return fallback
+
+    # ─────────────────────────────────────────
     #  RAG : INDEXATION & RETRIEVAL
     # ─────────────────────────────────────────
     def _index_job(self, job: dict):

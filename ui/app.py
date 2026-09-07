@@ -414,6 +414,20 @@ def show_job_analysis(job):
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(f"💡 **Recommandations du Coach**")
     recs = job.get("recommendations", [])
+    # Générer les recommandations via CoachAgent si elles sont absentes (mode réel uniquement)
+    if not recs and not st.session_state.get("use_mock"):
+        try:
+            from agents.coach_agent import CoachAgent as _CA
+            _coach = _CA()
+            recs = _coach.generate_recommendations(
+                job=job,
+                candidate_profile=st.session_state.get("candidate_profile"),
+                analysis=job,
+            )
+            # Mémoriser dans le job pour éviter de recalculer
+            job["recommendations"] = recs
+        except Exception as _e:
+            recs = []
     if recs:
         for r in recs:
             st.markdown(f"- {r}")
@@ -1107,8 +1121,21 @@ def _run_search_pipeline(user_profile: str):
                 "best_match": scored_jobs[0] if scored_jobs else None,
             }
         else:
-        
-            result = run_pipeline(user_profile=user_profile)
+            # ── Détecter le statut Premium / Admin ──
+            _user_data_raw = st.session_state.get("user") or {}
+            _user_data_for_check = {
+                "email": _user_data_raw.get("email", ""),
+                "role": st.session_state.get("user_role", "user"),
+                "subscription_status": st.session_state.get("subscription_status", "free"),
+                "subscription_expiry": st.session_state.get("subscription_expiry"),
+            }
+            _is_premium = AuthManager.is_premium_or_admin(_user_data_for_check)
+
+            result = run_pipeline(
+                user_profile=user_profile,
+                is_premium=_is_premium,
+                candidate_profile=st.session_state.get("candidate_profile"),
+            )
             progress.progress(100, text="Terminé !")
             st.session_state.pipeline_result = result
 

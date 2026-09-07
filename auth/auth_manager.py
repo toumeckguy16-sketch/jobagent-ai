@@ -401,6 +401,37 @@ class AuthManager:
             }
 
     @staticmethod
+    def is_premium_or_admin(user_data: dict) -> bool:
+        """
+        Vérifie de façon centralisée si un utilisateur est Administrateur ou Abonné Premium actif.
+        Retourne True si :
+        1. L'utilisateur est admin (rôle 'admin' ou email 'toumeckguy16@gmail.com').
+        2. L'abonnement est validé ('active') et non expiré.
+        """
+        if not user_data or not isinstance(user_data, dict):
+            return False
+
+        # 1. Contrôle Administrateur (prioritaire et permanent)
+        email = (user_data.get("email") or "").lower().strip()
+        role = (user_data.get("role") or "").lower().strip()
+        if email == "toumeckguy16@gmail.com" or role == "admin":
+            return True
+
+        # 2. Contrôle Abonnement Premium actif et non expiré
+        sub_status = (user_data.get("subscription_status") or "free").lower().strip()
+        sub_expiry = user_data.get("subscription_expiry")
+        if sub_status == "active" and sub_expiry:
+            try:
+                from datetime import datetime as _dt
+                expiry_dt = _dt.fromisoformat(sub_expiry)
+                if _dt.now() < expiry_dt:
+                    return True
+            except Exception:
+                pass
+
+        return False
+
+    @staticmethod
     def increment_user_cycle(uid: str, search_id: str) -> dict:
         """IncrÃ©mente le nombre de cycles utilisÃ©s si cette recherche n'a pas dÃ©jÃ  Ã©tÃ© comptabilisÃ©e."""
         try:

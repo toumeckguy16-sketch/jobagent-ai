@@ -26,6 +26,12 @@ FRENCH_MONTHS = {
     "janv": 1, "sept": 9, "octo": 10, "nove": 11, "dece": 12
 }
 
+FRENCH_MONTHS_REV = {
+    1: "janvier", 2: "février", 3: "mars", 4: "avril",
+    5: "mai", 6: "juin", 7: "juillet", 8: "août",
+    9: "septembre", 10: "octobre", 11: "novembre", 12: "décembre"
+}
+
 
 class ScraperAgent:
     """
@@ -84,23 +90,36 @@ class ScraperAgent:
     # ============================================================
     # MÉTHODE PRINCIPALE
     # ============================================================
-    def scrape(self, query: str, max_jobs: int = 10) -> List[Dict[str, Any]]:
+    def scrape(self, query: str, max_jobs: int = 10, is_premium: bool = False) -> List[Dict[str, Any]]:
         """
         Recherche des offres d'emploi correspondant au profil.
-        Active automatiquement un mode fallback si aucune offre ne passe
-        les filtres de date/qualité ou si le pool brut est vide.
+
+        Mode Gratuit (is_premium=False) :
+        - Comportement actuel inchangé : ~5 offres cibles
+        - Fallback autorisé (peut inclure offres sans date ou légèrement expirées)
+        - Même filtrage de date existant
+
+        Mode Premium / Admin (is_premium=True) :
+        - Cible 7 à 10 offres valides et actives (non expirées)
+        - Filtrage strict : date d'expiration future ou publication récente
+        - Élargissement progressif en 2 passes si moins de 7 offres
+        - Déduplication robuste
+        - Logs détaillés [Premium Scraper]
         """
-        print("  → [ScraperAgent] Recherche via Tavily...")
-        print(f"  → [ScraperAgent] Profil reçu ({len(query)} chars) : {query[:200]}...")
-        
+        mode_label = "[Premium Scraper]" if is_premium else "[ScraperAgent]"
+        target = 7 if is_premium else 5
+
+        print(f"  → {mode_label} Recherche via Tavily... (mode={'Premium' if is_premium else 'Gratuit'})")
+        print(f"  → {mode_label} Profil reçu ({len(query)} chars) : {query[:200]}...")
+
         # Réinitialiser le pool brut à chaque appel
         self._all_raw_jobs = []
-        
+
         # Garde-fou : si le profil est vide ou trop court, lever une alerte
         if not query or len(query.strip()) < 10:
-            print("  ⚠ [ScraperAgent] Profil vide ou trop court — recherche générique activée")
+            print(f"  ⚠ {mode_label} Profil vide ou trop court — recherche générique activée")
             query = "offre emploi Cameroun"
-        
+
         keywords = self._extract_keywords(query)
         queries = self._build_queries(keywords)
         all_jobs = []
@@ -109,20 +128,23 @@ class ScraperAgent:
             try:
                 print(f"     Requête : {q}")
                 results = self.tavily.invoke(q)
-                jobs = self._parse_results(results)
+                if is_premium:
+                    jobs = self._parse_results_premium(results)
+                else:
+                    jobs = self._parse_results(results)
                 all_jobs.extend(jobs)
             except Exception as e:
                 print(f"  ⚠ Erreur Tavily pour '{q}': {e}")
                 self._record_rejection("web", "Scraping échoué")
 
         unique_jobs = self._deduplicate(all_jobs)
-        
+
         # -- Assurer la diversité des sources --
         from collections import defaultdict
         source_map = defaultdict(list)
         for job in unique_jobs:
             source_map[job["source"]].append(job)
-            
+
         diverse_jobs = []
         while source_map and len(diverse_jobs) < max_jobs:
             for src in list(source_map.keys()):
@@ -132,12 +154,38 @@ class ScraperAgent:
                 if not source_map[src]:
                     del source_map[src]
 
-        # ──────────────────────────────────────
-        # MODE FALLBACK : aucune offre valide après filtrage de date
-        # ──────────────────────────────────────
-        if not diverse_jobs:
-            # Si le pool brut est vide (toutes les requêtes ont échoué),
-            # on lance des requêtes de fallback élargies pour alimenter le pool
+        # ──────────────────────────────────────────────
+        # MODE PREMIUM : élargissement si < 7 offres
+        # ──────────────────────────────────────────────
+        if is_premium and len(diverse_jobs) < target:
+            print(f"  ⚠ {mode_label} Seulement {len(diverse_jobs)} offre(s) valide(s) — lancement passe 2 (requêtes élargies)...")
+            extended_queries = self._build_premium_extended_queries(keywords)
+            extra_jobs = []
+            for eq in extended_queries:
+                try:
+                    print(f"     [Premium Pass 2] Requête : {eq}")
+                    results = self.tavily.invoke(eq)
+                    parsed = self._parse_results_premium(results)
+                    extra_jobs.extend(parsed)
+                except Exception as e:
+                    print(f"  ⚠ Erreur Tavily [Premium Pass 2] pour '{eq}': {e}")
+
+            # Ajouter les nouvelles offres uniques
+            existing_urls = {j.get("url", "").lower() for j in diverse_jobs}
+            existing_titles = {j.get("title", "").lower()[:40] for j in diverse_jobs}
+            for job in extra_jobs:
+                url_k = job.get("url", "").lower()
+                title_k = job.get("title", "").lower()[:40]
+                if url_k not in existing_urls and title_k not in existing_titles and len(diverse_jobs) < 10:
+                    diverse_jobs.append(job)
+                    existing_urls.add(url_k)
+                    existing_titles.add(title_k)
+                    print(f"  ✓ {mode_label} Offre ajoutée (Pass 2) : '{job['title']}' de '{job.get('source')}'")
+
+        # ──────────────────────────────────────────────
+        # MODE GRATUIT FALLBACK : si aucune offre valide
+        # ──────────────────────────────────────────────
+        if not is_premium and not diverse_jobs:
             if not self._all_raw_jobs:
                 print("  ⚠ [ScraperAgent] Pool brut vide — lancement de requêtes de fallback élargies...")
                 fallback_queries = self._build_fallback_queries(keywords)
@@ -145,7 +193,6 @@ class ScraperAgent:
                     try:
                         print(f"     [Fallback Query] : {fq}")
                         results = self.tavily.invoke(fq)
-                        # On stocke TOUT dans le pool brut sans filtrer par date
                         for r in results:
                             url = r.get("url", "")
                             title = r.get("title", "Offre d'emploi")
@@ -181,12 +228,12 @@ class ScraperAgent:
                 else:
                     print("  ✗ [Fallback] Pool brut vide — aucune offre à injecter.")
 
-        print(f"  ✅ {len(diverse_jobs)} offres collectées avec diversité")
-        
+        print(f"  ✅ {mode_label} {len(diverse_jobs)} offre(s) collectée(s)")
+
         # Nettoyage : retirer la clé privée utilisée uniquement pour le fallback
         for job in diverse_jobs:
             job.pop("_pub_date_obj", None)
-        
+
         return diverse_jobs
 
     # ============================================================
@@ -418,6 +465,146 @@ class ScraperAgent:
         else:
             print(f"     [Debug] Offre rejetée (Aucune date disponible) : {title}")
             return False, "Aucune date"
+
+
+    # ============================================================
+    # MÉTHODES PREMIUM
+    # ============================================================
+    # Mots indiquant que l'offre est fermée — rejetés uniquement en mode Premium
+    PREMIUM_REJECT_WORDS = [
+        "candidatures closes", "poste pourvu", "clôturée",
+        "offre archivée", "offre expirée", "recrutement terminé",
+        "clôturée", "annonce expirée",
+    ]
+
+    def _parse_results_premium(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Version stricte de _parse_results pour le mode Premium.
+        - Rejette toutes les offres sans date ni d'expiration future
+        - Rejette les offres contenant des mots signalant une candidature fermée
+        - Limite la fraîcheur à 45 jours (vs 15 en Free)
+        - Log chaque acceptation/rejet avec raison
+        """
+        jobs = []
+        today = date.today()
+        MAX_DAYS_PREMIUM = 45  # Fenêtre de fraîcheur élargie pour avoir assez d'offres
+
+        for r in results:
+            url = r.get("url", "")
+            title = r.get("title", "Offre d'emploi")
+            content = r.get("content", "") or r.get("raw_content", "")
+            combined_text = (title + " " + content).lower()
+
+            # Rejeter offres fermées / archivées
+            rejected_word = next((w for w in self.PREMIUM_REJECT_WORDS if w in combined_text), None)
+            if rejected_word:
+                print(f"     [Premium Scraper] Offre REJETÉE (mot interdit : '{rejected_word}') : {title}")
+                self._record_rejection(url, f"Mot interdit Premium: {rejected_word}")
+                continue
+
+            source = self._identify_source(url)
+            company = self._extract_company(content, title)
+            location = self._extract_location(title + " " + content)
+
+            pub_date_obj = self._extract_publication_date(content)
+            exp_date_obj = self._extract_expiration_date(content)
+
+            pub_str = pub_date_obj.strftime("%d/%m/%Y") if pub_date_obj else "Non précisée"
+            expiration_str = exp_date_obj.strftime("%d/%m/%Y") if exp_date_obj else "Non précisée"
+
+            description = content[:600].strip() if content else title
+            title_clean = self._clean_title(title)
+            company_clean = self._clean_text(company)
+            location_clean = self._clean_text(location)
+            description_clean = self._clean_text(description)
+            url_clean = self._validate_url(url)
+
+            if url_clean == "Lien indisponible":
+                self._record_rejection(url, "Lien invalide")
+                continue
+
+            if location_clean in ["N/A", ""]:
+                print(f"     [Premium Scraper] Offre REJETÉE (localisation invalide) : {title_clean}")
+                self._record_rejection(url, "Localisation non spécifique")
+                continue
+
+            # --- Filtrage strict Premium ---
+            accepted = False
+            raison = ""
+
+            if pub_date_obj:
+                delta = today - pub_date_obj
+                is_expired = (exp_date_obj is not None and exp_date_obj <= today)
+                if delta.days <= MAX_DAYS_PREMIUM and not is_expired:
+                    accepted = True
+                    raison = f"Publiée il y a {delta.days} j, non expirée"
+                else:
+                    raison = "Expirée" if is_expired else f"Trop ancienne ({delta.days} j > {MAX_DAYS_PREMIUM})"
+            elif exp_date_obj:
+                if exp_date_obj > today:
+                    accepted = True
+                    raison = f"Expire le {exp_date_obj}"
+                else:
+                    raison = f"Expirée le {exp_date_obj}"
+            else:
+                # Mode Premium : rejeter si aucune date disponible
+                raison = "Aucune date — rejetée (strict Premium)"
+
+            job_entry = {
+                "title": title_clean,
+                "company": company_clean,
+                "location": location_clean,
+                "publication_date": pub_str,
+                "expiration_date": expiration_str,
+                "description": description_clean,
+                "url": url_clean,
+                "source": source,
+                "_pub_date_obj": pub_date_obj,
+            }
+
+            if accepted:
+                print(f"     [Premium Scraper] Offre ACCEPTÉE ({raison}) : {title_clean}")
+                jobs.append(job_entry)
+            else:
+                print(f"     [Premium Scraper] Offre REJETÉE ({raison}) : {title_clean}")
+                self._record_rejection(url, raison)
+
+        return jobs
+
+    def _build_premium_extended_queries(self, keywords: List[str]) -> List[str]:
+        """
+        Génère des requêtes élargies pour la passe 2 Premium.
+        Utilise les métiers et compétences connexes sans perdre la pertinence géographique.
+        Limite le bruit en ciblant des portails d'emploi fiables.
+        """
+        today_obj = date.today()
+        month_name = FRENCH_MONTHS_REV.get(today_obj.month, "")
+        year = today_obj.year
+
+        # Sites fiables pour les requêtes ciblées
+        reliable_sites = [
+            "site:emploi.cm OR site:rekrute.com OR site:linkedin.com/jobs OR site:jobtogo.com",
+            "site:jobartis.com OR site:africajob.com OR site:afrijob.net",
+        ]
+
+        # Mots clés pertinents mais plus larges
+        base_kw = " ".join(keywords[:3]) if keywords else "emploi"
+        extended_kw = " ".join(keywords[3:6]) if len(keywords) > 3 else base_kw
+
+        queries = []
+        for site_filter in reliable_sites:
+            queries.append(
+                f'offre emploi {base_kw} Cameroun {month_name} {year} {site_filter}'
+            )
+        queries.append(
+            f'recrutement {base_kw} Yaoundé Douala Cameroun {month_name} {year}'
+        )
+        if extended_kw and extended_kw != base_kw:
+            queries.append(
+                f'offre emploi {extended_kw} Cameroun {year}'
+            )
+
+        return queries
 
     # ============================================================
     # UTILITAIRES D'EXTRACTION

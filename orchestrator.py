@@ -23,6 +23,8 @@ class JobSearchState(TypedDict):
     # Profil utilisateur (entrée F1)
     user_profile: str                        # Description texte du candidat
     user_skills: List[str]                   # Compétences extraites du profil
+    candidate_profile: Optional[dict]        # Profil structuré du candidat (hard_skills, outils, niveau…)
+    is_premium: bool                         # True si l'utilisateur est Premium ou Admin
     # Offres collectées (F2)
     raw_jobs: List[dict]                     # Offres brutes scrappées
     # Compétences des offres (F3)
@@ -43,9 +45,14 @@ class JobSearchState(TypedDict):
 # ─────────────────────────────────────────────
 def scraper_node(state: JobSearchState) -> JobSearchState:
     """Nœud Agent Scraper : collecte les offres (F2)"""
-    print("🔍[Agent Scraper] Collecte des offres en cours...")
+    is_premium = state.get("is_premium", False)
+    mode = "Premium" if is_premium else "Gratuit"
+    print(f"🔍[Agent Scraper] Collecte des offres en cours... (mode {mode})")
     agent = ScraperAgent()
-    jobs = agent.scrape(query=state["user_profile"])
+    jobs = agent.scrape(
+        query=state["user_profile"],
+        is_premium=is_premium,
+    )
     return {
         **state,
         "raw_jobs": jobs,
@@ -67,7 +74,8 @@ def analyst_node(state: JobSearchState) -> JobSearchState:
     agent = AnalystAgent()
     scores = agent.analyze(
         user_profile=state["user_profile"],
-        jobs=state["jobs_with_skills"]
+        jobs=state["jobs_with_skills"],
+        candidate_profile=state.get("candidate_profile"),
     )
     best = max(scores, key=lambda x: x["score"]) if scores else None
     return {
@@ -124,12 +132,26 @@ def build_graph() -> StateGraph:
 # ─────────────────────────────────────────────
 #  POINT D'ENTRÉE
 # ─────────────────────────────────────────────
-def run_pipeline(user_profile: str, selected_job: dict = None) -> JobSearchState:
-    """Lance le pipeline complet"""
+def run_pipeline(
+    user_profile: str,
+    selected_job: dict = None,
+    is_premium: bool = False,
+    candidate_profile: dict = None,
+) -> JobSearchState:
+    """Lance le pipeline complet de recherche d'emploi.
+
+    Args:
+        user_profile: Texte descriptif du candidat (CV, compétences, etc.)
+        selected_job: Offre pré-sélectionnée (pour déclencher le coach)
+        is_premium: True si l'utilisateur a un abonnement Premium/Admin actif
+        candidate_profile: Profil structuré extrait du CV (hard_skills, outils, niveau…)
+    """
     app = build_graph()
     initial_state = JobSearchState(
         user_profile=user_profile,
         user_skills=[],
+        candidate_profile=candidate_profile,
+        is_premium=is_premium,
         raw_jobs=[],
         jobs_with_skills=[],
         selected_job=selected_job,
@@ -138,7 +160,8 @@ def run_pipeline(user_profile: str, selected_job: dict = None) -> JobSearchState
         quiz_questions=[],
         chat_history=[],
         current_step="start",
-        errors=[]
+        errors=[],
+        flyer_url=None,
     )
     result = app.invoke(initial_state)
-    return result
+    return result

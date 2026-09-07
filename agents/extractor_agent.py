@@ -9,10 +9,10 @@ import re
 import json
 import time
 from typing import List
-from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
+
+from utils.llm_response import make_chat_groq, invoke_json
 
 # ─────────────────────────────────────────────
 #  SCHÉMA DE SORTIE STRUCTURÉ (Pydantic)
@@ -61,17 +61,15 @@ Retourne le JSON structuré."""
 
     def __init__(self, model: str = None):
         self.model_name = model or os.getenv("GROQ_EXTRACTOR_MODEL", self.DEFAULT_MODEL)
-        self.llm = ChatGroq(
+        self.llm = make_chat_groq(
             model=self.model_name,
             temperature=0,
-            api_key=os.getenv("GROQ_API_KEY"),
             max_tokens=1024,
         )
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", self.SYSTEM_PROMPT),
             ("human",  self.EXTRACTION_PROMPT),
         ])
-        self.chain = self.prompt | self.llm | JsonOutputParser()
 
     def extract_skills(self, jobs: List[dict]) -> List[dict]:
         enriched_jobs = []
@@ -89,11 +87,12 @@ Retourne le JSON structuré."""
         return enriched_jobs
 
     def _extract_from_job(self, job: dict) -> dict:
-        raw_result = self.chain.invoke({
-            "title":       job.get("title", ""),
-            "company":     job.get("company", ""),
-            "description": job.get("description", ""),
-        })
+        messages = self.prompt.format_messages(
+            title=job.get("title", ""),
+            company=job.get("company", ""),
+            description=(job.get("description") or "")[:1500],
+        )
+        raw_result = invoke_json(self.llm, messages)
         return self._validate_and_normalize(raw_result)
 
     def _validate_and_normalize(self, raw: dict) -> dict:
