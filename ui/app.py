@@ -2298,8 +2298,12 @@ elif page == "Préparation à l'entretien":
                                 welcome = f"Bonjour ! Bienvenue à votre entretien pour le poste de {job['title']}. Parlez-moi un peu de vous."
                             else:
                                 try:
-                                    welcome = CoachAgent().init_interview(job, candidate_profile=st.session_state.candidate_profile)
+                                    _prof = st.session_state.get("candidate_profile")
+                                    if not _prof and st.session_state.get("user_profile_text"):
+                                        _prof = {"profile_text": st.session_state.user_profile_text}
+                                    welcome = CoachAgent().init_interview(job, candidate_profile=_prof)
                                 except Exception as e:
+                                    print(f"[Coach init_interview error] {e}")
                                     st.warning("⚠️ Limite temporaire de requêtes Groq. Message d'accueil de secours chargé.")
                                     welcome = f"Bonjour ! Bienvenue à votre entretien pour le poste de **{job.get('title', 'ce poste')}**. Parlez-moi de votre parcours et de vos motivations."
                                     
@@ -2344,13 +2348,17 @@ elif page == "Préparation à l'entretien":
                             response = f"C'est une très bonne réponse pour {job['title']}. Avez-vous une autre question ?"
                         else:
                             try:
+                                _prof = st.session_state.get("candidate_profile")
+                                if not _prof and st.session_state.get("user_profile_text"):
+                                    _prof = {"profile_text": st.session_state.user_profile_text}
                                 response = CoachAgent().chat(
                                     user_message=prompt,
                                     job=job,
                                     history=active_chat["messages"][:-1],
-                                    candidate_profile=st.session_state.candidate_profile
+                                    candidate_profile=_prof
                                 )
                             except Exception as e:
+                                print(f"[Coach chat error] {e}")
                                 st.warning("⚠️ Le coach IA rencontre une forte affluence en ce moment.")
                                 response = (
                                     "⚠️ Le service d'IA a atteint sa limite temporaire de requêtes Groq. "

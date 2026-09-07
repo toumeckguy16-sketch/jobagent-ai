@@ -94,7 +94,12 @@ Retourne UNIQUEMENT le JSON avec la liste des {remaining} nouvelles questions.""
     CHAT_SYSTEM_PROMPT = """Tu es un coach bienveillant et expert en entretiens d'embauche.
 Tu aides un candidat à préparer son entretien pour le poste de {job_title} chez {company}.
 Contexte de l'offre : {job_context}
-Réponds de façon constructive, encourage le candidat et donne des exemples concrets.
+{candidate_context}
+
+RÈGLES ABSOLUES POUR LE COACH :
+- Tu as le CV du candidat sous les yeux (voir Profil du candidat ci-dessus).
+- Tu NE DOIS JAMAIS dire "Comme je n'ai pas accès à votre CV", "N'ayant pas votre CV", ou mentionner l'absence d'un document.
+- Réponds directement au candidat de façon constructive, encourage-le et donne des exemples concrets en t'appuyant sur son profil et le poste.
 """
 
     def __init__(self, model: str = "qwen/qwen3.6-27b"):
@@ -282,6 +287,73 @@ Réponds de façon constructive, encourage le candidat et donne des exemples con
         return True
 
     # ─────────────────────────────────────────
+    #  FORMATTAGE DU PROFIL CANDIDAT (CV)
+    # ─────────────────────────────────────────
+    @staticmethod
+    def _format_candidate_context(candidate_profile: dict) -> str:
+        """Formate de manière riche et compacte le profil du candidat issu du CV"""
+        if not candidate_profile or not isinstance(candidate_profile, dict):
+            return ""
+
+        sections = []
+
+        # 1. En-tête candidat
+        header_parts = []
+        name = candidate_profile.get("full_name")
+        if name and str(name).strip().lower() not in ("candidat", "none", ""):
+            header_parts.append(f"Nom : {name}")
+        title = candidate_profile.get("job_title")
+        if title and str(title).strip().lower() not in ("profil saisi", "candidat", "none", ""):
+            header_parts.append(f"Titre / Métier : {title}")
+        exp_years = candidate_profile.get("experience_years")
+        if exp_years:
+            header_parts.append(f"Expérience : {exp_years} an(s)")
+        edu = candidate_profile.get("education_level")
+        if edu:
+            header_parts.append(f"Formation : {edu}")
+        if header_parts:
+            sections.append(" | ".join(header_parts))
+
+        # 2. Compétences & Outils
+        hard = candidate_profile.get("hard_skills") or []
+        tools = candidate_profile.get("tools") or []
+        if isinstance(hard, str): hard = [hard]
+        if isinstance(tools, str): tools = [tools]
+        combined = [str(s).strip() for s in (hard + tools) if s and str(s).strip()]
+        if combined:
+            seen = set()
+            unique_skills = [s for s in combined if not (s.lower() in seen or seen.add(s.lower()))][:8]
+            sections.append(f"Compétences clés du CV : {', '.join(unique_skills)}")
+
+        # 3. Résumé / Profil
+        summary = (candidate_profile.get("summary") or candidate_profile.get("profile_text") or "").strip()
+        if summary:
+            sections.append(f"Résumé du profil : {summary[:250]}")
+
+        # 4. Expériences professionnelles
+        exps = candidate_profile.get("experiences") or []
+        if isinstance(exps, list) and exps:
+            exp_lines = []
+            for exp in exps[:3]:
+                t = exp.get("title") or ""
+                c = exp.get("company") or ""
+                p = exp.get("period") or ""
+                d = (exp.get("description") or "")[:120].strip()
+                line = f"- {t}" + (f" chez {c}" if c else "") + (f" ({p})" if p else "") + (f": {d}" if d else "")
+                if line.strip() != "-":
+                    exp_lines.append(line)
+            if exp_lines:
+                sections.append("Expériences professionnelles :\n" + "\n".join(exp_lines))
+        elif candidate_profile.get("raw_cv_text"):
+            raw = str(candidate_profile["raw_cv_text"])[:350].strip()
+            sections.append(f"Extrait du CV :\n{raw}")
+
+        if not sections:
+            return ""
+
+        return "\n--- PROFIL DU CANDIDAT (CV ANALYSÉ) ---\n" + "\n".join(sections) + "\n----------------------------------------"
+
+    # ─────────────────────────────────────────
     #  CHAT INTERACTIF
     # ─────────────────────────────────────────
     def chat(self, user_message: str, job: dict, history: List[dict] = None, candidate_profile: dict = None) -> str:
@@ -292,37 +364,35 @@ Réponds de façon constructive, encourage le candidat et donne des exemples con
             f"Description : {job.get('description', '')[:250]}"
         )
 
-        # Enrichissement avec les expériences du candidat (compacté pour économiser les tokens TPM)
-        candidate_context = ""
-        if candidate_profile and candidate_profile.get("experiences"):
-            candidate_context = "\nExpériences professionnelles clés du candidat :\n"
-            for exp in candidate_profile["experiences"][:3]:
-                desc = (exp.get("description") or "")[:150]
-                candidate_context += f"- {exp.get('title')} chez {exp.get('company')} ({exp.get('period')}): {desc}\n"
+        candidate_context = self._format_candidate_context(candidate_profile)
+
+        system_text = self.CHAT_SYSTEM_PROMPT.format(
+            job_title=job.get("title", ""),
+            company=job.get("company", ""),
+            job_context=job_context,
+            candidate_context=candidate_context
+        )
 
         messages = [
-            ("system", self.CHAT_SYSTEM_PROMPT.format(
-                job_title=job.get("title", ""),
-                company=job.get("company", ""),
-                job_context=job_context + candidate_context
-            ))
+            SystemMessage(content=system_text)
         ]
         # Conserver les 4 derniers échanges max pour limiter l'empreinte de tokens
         if history:
             for msg in history[-4:]:
                 content = (msg.get("content") or "")[:300]
-                messages.append((msg["role"], content))
+                if msg.get("role") == "user":
+                    messages.append(HumanMessage(content=content))
+                else:
+                    messages.append(AIMessage(content=content))
 
         rag_snippet = context[:400] if context else ""
-        messages.append(("human", f"Contexte : {rag_snippet}\n\nQuestion / Réponse : {user_message}"))
-
-        prompt = ChatPromptTemplate.from_messages(messages)
-        chain = prompt | self.llm
+        human_text = f"Contexte de l'offre : {rag_snippet}\n\nMessage du candidat : {user_message}"
+        messages.append(HumanMessage(content=human_text))
 
         try:
             response = invoke_with_retry(
-                chain,
-                {},
+                self.llm,
+                messages,
                 max_retries=2,
                 fallback_models=["qwen/qwen3.8-27b", "openai/gpt-oss-20b"],
                 temperature=0.3,
@@ -345,29 +415,28 @@ Réponds de façon constructive, encourage le candidat et donne des exemples con
         skills = job.get("skills", {})
         hard_skills = ", ".join(skills.get("hard_skills", [])[:5])
 
-        # Enrichissement compacté avec les expériences du candidat
-        candidate_context = ""
-        if candidate_profile and candidate_profile.get("experiences"):
-            candidate_context = "\nVoici les expériences clés du candidat pour t'aider à personnaliser ta première question :\n"
-            for exp in candidate_profile["experiences"][:2]:
-                desc = (exp.get("description") or "")[:120]
-                candidate_context += f"- {exp.get('title')} chez {exp.get('company')}: {desc}\n"
+        candidate_context = self._format_candidate_context(candidate_profile)
 
         prompt_system = f"""Tu es un recruteur bienveillant et expert. Tu accueilles chaleureusement le candidat pour son entretien pour le poste de {job.get('title', 'ce poste')} chez {job.get('company', 'notre structure')}.
-Fais une courte introduction (1-2 phrases) et pose ta première question ouverte. 
-IMPORTANT : Utilise les expériences passées du candidat (si fournies) pour rendre ta question plus pertinente et personnalisée par rapport aux compétences requises ({hard_skills}). 
-{candidate_context}
-Attends ensuite sa réponse. Ne pose pas plusieurs questions à la fois."""
+Fais une courte introduction (1-2 phrases) et pose ta première question ouverte.
 
-        # Groq/Qwen exige au moins un message "human" — on ajoute un déclencheur neutre
-        chain = ChatPromptTemplate.from_messages([
-            ("system", prompt_system),
-            ("human", "Commence l'entretien."),
-        ]) | self.llm
+{candidate_context}
+
+RÈGLES STRICTES ET OBLIGATOIRES POUR LE RECRUTEUR :
+1. Tu as déjà le CV du candidat sous les yeux (voir Profil du candidat ci-dessus).
+2. Tu NE DOIS JAMAIS dire "Comme je n'ai pas accès à votre CV", "N'ayant pas votre CV", ou mentionner l'absence d'accès à son CV.
+3. Personnalise directement ta première question en t'appuyant sur son profil (son intitulé, une de ses compétences ou une expérience passée) et sur les compétences requises pour le poste ({hard_skills}).
+4. Si le profil n'a pas d'expérience spécifique détaillée, demande-lui simplement de se présenter et d'expliquer ses motivations pour ce poste.
+5. Attends sa réponse. Ne pose qu'une seule question à la fois."""
+
+        messages = [
+            SystemMessage(content=prompt_system),
+            HumanMessage(content="Commence l'entretien.")
+        ]
         try:
             response = invoke_with_retry(
-                chain,
-                {},
+                self.llm,
+                messages,
                 max_retries=2,
                 fallback_models=["qwen/qwen3.8-27b", "openai/gpt-oss-20b"],
                 temperature=0.3,
