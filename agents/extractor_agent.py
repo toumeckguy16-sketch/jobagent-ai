@@ -1,4 +1,4 @@
-﻿"""
+"""
 Agent Extracteur (F3)
 Extrait automatiquement les compétences requises dans chaque offre d'emploi.
 Utilise ChatGroq (API cloud) pour fonctionner sur Streamlit Cloud.
@@ -7,6 +7,7 @@ Note : Ollama (local) remplacé par ChatGroq pour la compatibilité cloud.
 import os
 import re
 import json
+import time
 from typing import List
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
@@ -64,6 +65,7 @@ Retourne le JSON structuré."""
             model=self.model_name,
             temperature=0,
             api_key=os.getenv("GROQ_API_KEY"),
+            max_tokens=1024,
         )
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", self.SYSTEM_PROMPT),
@@ -73,8 +75,10 @@ Retourne le JSON structuré."""
 
     def extract_skills(self, jobs: List[dict]) -> List[dict]:
         enriched_jobs = []
-        for job in jobs:
+        for i, job in enumerate(jobs):
             try:
+                if i > 0:
+                    time.sleep(0.3)
                 print(f"    [Groq/{self.model_name}] Extraction : {job['title']} @ {job['company']}")
                 skills       = self._extract_from_job(job)
                 enriched_job = {**job, "skills": skills}

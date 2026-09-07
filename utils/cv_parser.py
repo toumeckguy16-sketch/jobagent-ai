@@ -20,7 +20,12 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from typing import List
 
-from utils.llm_response import make_chat_groq, extract_final_content, parse_json_from_text
+from utils.llm_response import (
+    make_chat_groq,
+    extract_final_content,
+    parse_json_from_text,
+    invoke_with_retry,
+)
 
 # ─────────────────────────────────────────────
 #  SCHÉMA DU PROFIL EXTRAIT (Pydantic)
@@ -224,17 +229,20 @@ Extrais toutes les informations et retourne le JSON du profil candidat."""
         Passe systématiquement par extract_final_content() pour
         supprimer tout raisonnement interne Qwen avant le parsing.
         """
-        messages = self.prompt.format_messages(**inputs)
-        response = self.llm.invoke(messages)
-
-        # Extraction de la réponse finale uniquement (supprime le thinking Qwen)
-        visible_text = extract_final_content(response)
-
-        # Parsing JSON robuste (gère les blocs ```json, les préfixes, etc.)
         try:
+            messages = self.prompt.format_messages(**inputs)
+            response = invoke_with_retry(
+                self.llm,
+                messages,
+                max_retries=2,
+                fallback_models=["qwen/qwen3.8-27b", "openai/gpt-oss-20b"],
+                temperature=0.0,
+                max_tokens=4096,
+            )
+            visible_text = extract_final_content(response)
             return parse_json_from_text(visible_text)
         except Exception as e:
-            print(f"[CVParser] Erreur parsing JSON : {e}. Retour profil vide.")
+            print(f"[CVParser] Erreur parsing JSON ou LLM : {e}. Retour profil vide.")
             return self._empty_profile()
 
     @staticmethod

@@ -11,7 +11,12 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
-from utils.llm_response import make_chat_groq, extract_final_content, invoke_json
+from utils.llm_response import (
+    make_chat_groq,
+    extract_final_content,
+    invoke_json,
+    invoke_with_retry,
+)
 
 CHROMA_AVAILABLE = False
 try:
@@ -97,6 +102,7 @@ Réponds de façon constructive, encourage le candidat et donne des exemples con
         # → supprime le raisonnement interne de la réponse Qwen
         self.llm = make_chat_groq(
             temperature=0.3,
+            max_tokens=1024,
             model=model,
         )
         self.embeddings = OpenAIEmbeddings(
@@ -276,15 +282,16 @@ Réponds de façon constructive, encourage le candidat et donne des exemples con
         skills     = job.get("skills", {})
         job_context = (
             f"Compétences requises : {', '.join(skills.get('hard_skills', []))}\n"
-            f"Description : {job.get('description', '')[:300]}"
+            f"Description : {job.get('description', '')[:250]}"
         )
 
-        # Enrichissement avec les expériences du candidat
+        # Enrichissement avec les expériences du candidat (compacté pour économiser les tokens TPM)
         candidate_context = ""
         if candidate_profile and candidate_profile.get("experiences"):
-            candidate_context = "\nExpériences professionnelles du candidat :\n"
-            for exp in candidate_profile["experiences"]:
-                candidate_context += f"- {exp.get('title')} chez {exp.get('company')} ({exp.get('period')}): {exp.get('description')}\n"
+            candidate_context = "\nExpériences professionnelles clés du candidat :\n"
+            for exp in candidate_profile["experiences"][:3]:
+                desc = (exp.get("description") or "")[:150]
+                candidate_context += f"- {exp.get('title')} chez {exp.get('company')} ({exp.get('period')}): {desc}\n"
 
         messages = [
             ("system", self.CHAT_SYSTEM_PROMPT.format(
@@ -293,27 +300,51 @@ Réponds de façon constructive, encourage le candidat et donne des exemples con
                 job_context=job_context + candidate_context
             ))
         ]
+        # Conserver les 4 derniers échanges max pour limiter l'empreinte de tokens
         if history:
-            for msg in history[-6:]:
-                messages.append((msg["role"], msg["content"]))
-        messages.append(("human", f"Contexte RAG : {context}\n\nQuestion / Réponse : {user_message}"))
-        prompt   = ChatPromptTemplate.from_messages(messages)
-        chain    = prompt | self.llm
-        response = chain.invoke({})
-        # Extraction de la réponse finale uniquement (supprime le raisonnement Qwen)
-        return extract_final_content(response)
+            for msg in history[-4:]:
+                content = (msg.get("content") or "")[:300]
+                messages.append((msg["role"], content))
+
+        rag_snippet = context[:400] if context else ""
+        messages.append(("human", f"Contexte : {rag_snippet}\n\nQuestion / Réponse : {user_message}"))
+
+        prompt = ChatPromptTemplate.from_messages(messages)
+        chain = prompt | self.llm
+
+        try:
+            response = invoke_with_retry(
+                chain,
+                {},
+                max_retries=2,
+                fallback_models=["qwen/qwen3.8-27b", "openai/gpt-oss-20b"],
+                temperature=0.3,
+                max_tokens=800,
+            )
+            return extract_final_content(response)
+        except Exception as e:
+            print(f"[CoachAgent] Erreur chat LLM résilient : {e}")
+            skills_list = skills.get("hard_skills", [])[:3]
+            skills_hint = f" ({', '.join(skills_list)})" if skills_list else ""
+            return (
+                f"⚠️ Je rencontre actuellement une forte affluence (limite temporaire de requêtes Groq atteinte). "
+                f"Pour votre préparation au poste de **{job.get('title', 'ce poste')}**, pensez à illustrer vos compétences clés{skills_hint} "
+                f"en utilisant la méthode STAR (Situation, Tâche, Action, Résultat). "
+                f"N'hésitez pas à me reposer votre question dans quelques secondes !"
+            )
 
     def init_interview(self, job: dict, candidate_profile: dict = None) -> str:
         """Génère le message de bienvenue pour l'entretien virtuel"""
         skills = job.get("skills", {})
-        hard_skills = ", ".join(skills.get("hard_skills", []))
+        hard_skills = ", ".join(skills.get("hard_skills", [])[:5])
 
-        # Enrichissement avec les expériences du candidat
+        # Enrichissement compacté avec les expériences du candidat
         candidate_context = ""
         if candidate_profile and candidate_profile.get("experiences"):
-            candidate_context = "\nVoici les expériences du candidat pour t'aider à personnaliser ta première question :\n"
-            for exp in candidate_profile["experiences"]:
-                candidate_context += f"- {exp.get('title')} chez {exp.get('company')} ({exp.get('period')}): {exp.get('description')}\n"
+            candidate_context = "\nVoici les expériences clés du candidat pour t'aider à personnaliser ta première question :\n"
+            for exp in candidate_profile["experiences"][:2]:
+                desc = (exp.get("description") or "")[:120]
+                candidate_context += f"- {exp.get('title')} chez {exp.get('company')}: {desc}\n"
 
         prompt_system = f"""Tu es un recruteur bienveillant et expert. Tu accueilles chaleureusement le candidat pour son entretien pour le poste de {job.get('title', 'ce poste')} chez {job.get('company', 'notre structure')}.
 Fais une courte introduction (1-2 phrases) et pose ta première question ouverte. 
@@ -327,8 +358,14 @@ Attends ensuite sa réponse. Ne pose pas plusieurs questions à la fois."""
             ("human", "Commence l'entretien."),
         ]) | self.llm
         try:
-            response = chain.invoke({})
-            # Extraction de la réponse finale uniquement (supprime le raisonnement Qwen)
+            response = invoke_with_retry(
+                chain,
+                {},
+                max_retries=2,
+                fallback_models=["qwen/qwen3.8-27b", "openai/gpt-oss-20b"],
+                temperature=0.3,
+                max_tokens=800,
+            )
             return extract_final_content(response)
         except Exception as e:
             print(f"Erreur init_interview : {e}")
